@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle PL</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121213;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #538d4e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.2s ease;
+        }
+
+        .back-button:hover {
+            background-color: #456f3e;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            color: #818384;
+            font-size: 0.9rem;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 30px;
+            padding: 10px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+        }
+
+        .tile {
+            width: 62px;
+            height: 62px;
+            border: 2px solid #3a3a3c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #121213;
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .tile.filled {
+            border-color: #565758;
+            animation: pop 0.1s ease-in-out;
+        }
+
+        .tile.correct {
+            background-color: #538d4e;
+            border-color: #538d4e;
+            color: #ffffff;
+        }
+
+        .tile.present {
+            background-color: #b59f3b;
+            border-color: #b59f3b;
+            color: #ffffff;
+        }
+
+        .tile.absent {
+            background-color: #3a3a3c;
+            border-color: #3a3a3c;
+            color: #ffffff;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .keyboard {
+            display: grid;
+            gap: 8px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .keyboard-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .key {
+            height: 58px;
+            border-radius: 4px;
+            border: none;
+            background-color: #818384;
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+            flex: 1;
+            max-width: 43px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-transform: uppercase;
+        }
+
+        .key:hover {
+            background-color: #565758;
+        }
+
+        .key.wide {
+            max-width: 65px;
+            font-size: 0.7rem;
+        }
+
+        .key.correct {
+            background-color: #538d4e;
+        }
+
+        .key.present {
+            background-color: #b59f3b;
+        }
+
+        .key.absent {
+            background-color: #3a3a3c;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #ffffff;
+            color: #000000;
+            padding: 16px 24px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1rem;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .message.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .stats {
+            margin-top: 20px;
+            text-align: center;
+            color: #818384;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Powrót</a>
+    
+    <div class="header">
+        <h1 class="title">WORDLE</h1>
+        <p class="subtitle">Zgadnij 5-literowe słowo w 6 próbach</p>
+    </div>
+
+    <div class="game-board" id="board">
+        <div class="row">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+        </div>
+        <div class="row">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+        </div>
+        <div class="row">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+        </div>
+        <div class="row">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+        </div>
+        <div class="row">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+        </div>
+        <div class="row">
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+            <div class="tile"></div>
+        </div>
+    </div>
+
+    <div class="keyboard" id="keyboard">
+        <div class="keyboard-row">
+            <button class="key" data-key="q">Q</button>
+            <button class="key" data-key="w">W</button>
+            <button class="key" data-key="e">E</button>
+            <button class="key" data-key="r">R</button>
+            <button class="key" data-key="t">T</button>
+            <button class="key" data-key="y">Y</button>
+            <button class="key" data-key="u">U</button>
+            <button class="key" data-key="i">I</button>
+            <button class="key" data-key="o">O</button>
+            <button class="key" data-key="p">P</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key" data-key="a">A</button>
+            <button class="key" data-key="s">S</button>
+            <button class="key" data-key="d">D</button>
+            <button class="key" data-key="f">F</button>
+            <button class="key" data-key="g">G</button>
+            <button class="key" data-key="h">H</button>
+            <button class="key" data-key="j">J</button>
+            <button class="key" data-key="k">K</button>
+            <button class="key" data-key="l">L</button>
+        </div>
+        <div class="keyboard-row">
+            <button class="key wide" data-key="enter">ENTER</button>
+            <button class="key" data-key="z">Z</button>
+            <button class="key" data-key="x">X</button>
+            <button class="key" data-key="c">C</button>
+            <button class="key" data-key="v">V</button>
+            <button class="key" data-key="b">B</button>
+            <button class="key" data-key="n">N</button>
+            <button class="key" data-key="m">M</button>
+            <button class="key wide" data-key="backspace">⌫</button>
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        Aktualne słowo dla godziny: <span id="current-time"></span>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <script>
+        // Lista polskich 5-literowych słów
+        const WORDS = [
+            'KOTEK', 'DOMEK', 'KWIAT', 'DZIEŃ', 'NUMER', 'OCEAN', 'PŁYTA', 'RYNEK', 'SZAFA', 'TANGO',
+            'ULICA', 'WOJNA', 'XERON', 'YAKUT', 'ZEBRA', 'ALARM', 'BIURO', 'CZASU', 'DROGA', 'ETYKA',
+            'FARBA', 'GRUPA', 'HUMOR', 'IKONA', 'JAZDA', 'KARTA', 'LAMPA', 'MIŁOŚĆ', 'NOCKA', 'OKNO',
+            'PIOTR', 'QUITE', 'ROBOT', 'SZKOŁA', 'TABLA', 'UKRYĆ', 'WAKJE', 'XUONG', 'YACHT', 'ZDANIE',
+            'BABKA', 'CHLEB', 'DRZEW', 'EPOKA', 'FLORA', 'GLINA', 'HONDA', 'ISKRA', 'JAZZY', 'KARMA',
+            'LICHA', 'MARKA', 'NAPIS', 'ODBÓR', 'POŻAR', 'QQUIN', 'RADIO', 'STARY', 'TEKST', 'UKLĘĆ',
+            'WODA', 'XYLEM', 'YUCCA', 'ZALEW', 'AKTOR', 'BIAŁY', 'CYFRA', 'DANIE', 'EKRAN', 'FUTRO',
+            'GÓRAL', 'HAŁAS', 'IGREK', 'JEDEN', 'KLASA', 'LITER', 'MŁODY', 'NOSIĆ', 'OKŁAD', 'PIZZA',
+            'QUEST', 'RONDO', 'SŁOWO', 'TREND', 'UCZTA', 'VOGUE', 'WODNY', 'XYLAN', 'YOUGA', 'ZAJĄC',
+            'ARTYS', 'BEZIK', 'CZARY', 'DEMON', 'EBOOK', 'FRONT', 'GITAR', 'HOTEL', 'IGLAK', 'JAROK'
+        ];
+
+        // Funkcja do generowania seeda na podstawie godziny i minuty
+        function generateSeed() {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            return hour * 100 + minute; // Przykład: 14:30 = 1430
+        }
+
+        // Prosty generator pseudolosowy oparty na seedzie
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+        }
+
+        // Wybierz słowo na podstawie aktualnej godziny i minuty
+        function getTodaysWord() {
+            const seed = generateSeed();
+            const rng = new SeededRandom(seed);
+            const index = Math.floor(rng.next() * WORDS.length);
+            return WORDS[index];
+        }
+
+        // Stan gry
+        let currentWord = getTodaysWord();
+        let currentRow = 0;
+        let currentTile = 0;
+        let gameOver = false;
+        let guesses = [];
+
+        console.log('Dzisiejsze słowo:', currentWord); // Do debugowania
+
+        // Elementy DOM
+        const board = document.getElementById('board');
+        const keyboard = document.getElementById('keyboard');
+        const message = document.getElementById('message');
+        const currentTimeDisplay = document.getElementById('current-time');
+
+        // Inicjalizacja gry
+        function init() {
+            keyboard.addEventListener('click', handleKeyboardClick);
+            document.addEventListener('keydown', handleKeyPress);
+            updateTimeDisplay();
+        }
+
+        // Aktualizacja wyświetlanej godziny
+        function updateTimeDisplay() {
+            const now = new Date();
+            const hour = now.getHours().toString().padStart(2, '0');
+            const minute = now.getMinutes().toString().padStart(2, '0');
+            currentTimeDisplay.textContent = `${hour}:${minute}`;
+        }
+
+        // Obsługa klawiatury na ekranie
+        function handleKeyboardClick(e) {
+            if (e.target.matches('.key')) {
+                const key = e.target.getAttribute('data-key');
+                handleInput(key);
+            }
+        }
+
+        // Obsługa klawiatury fizycznej
+        function handleKeyPress(e) {
+            if (gameOver) return;
+            
+            if (e.key === 'Enter') {
+                handleInput('enter');
+            } else if (e.key === 'Backspace') {
+                handleInput('backspace');
+            } else if (e.key.match(/[a-zA-Z]/)) {
+                handleInput(e.key.toLowerCase());
+            }
+        }
+
+        // Główna logika wprowadzania
+        function handleInput(key) {
+            if (gameOver) return;
+
+            if (key === 'enter') {
+                if (currentTile === 5) {
+                    submitGuess();
+                } else {
+                    showMessage('Za mało liter!');
+                }
+            } else if (key === 'backspace') {
+                if (currentTile > 0) {
+                    currentTile--;
+                    const tile = getCurrentTile();
+                    tile.textContent = '';
+                    tile.classList.remove('filled');
+                }
+            } else if (key.match(/[a-zA-Z]/) && currentTile < 5) {
+                const tile = getCurrentTile();
+                tile.textContent = key.toUpperCase();
+                tile.classList.add('filled');
+                currentTile++;
+            }
+        }
+
+        // Pobierz aktualny kafelek
+        function getCurrentTile() {
+            return board.children[currentRow].children[currentTile];
+        }
+
+        // Pobierz aktualny rząd
+        function getCurrentRow() {
+            return board.children[currentRow];
+        }
+
+        // Wyślij zgadywanie
+        function submitGuess() {
+            const row = getCurrentRow();
+            const guess = Array.from(row.children).map(tile => tile.textContent).join('');
+            
+            if (!isValidWord(guess)) {
+                showMessage('Nieprawidłowe słowo!');
+                return;
+            }
+
+            guesses.push(guess);
+            checkGuess(guess, row);
+            
+            if (guess === currentWord) {
+                gameOver = true;
+                setTimeout(() => showMessage('Gratulacje!'), 500);
+            } else if (currentRow === 5) {
+                gameOver = true;
+                setTimeout(() => showMessage(`Prawidłowe słowo: ${currentWord}`), 500);
+            } else {
+                currentRow++;
+                currentTile = 0;
+            }
+        }
+
+        // Sprawdź czy słowo jest prawidłowe (uproszczone)
+        function isValidWord(word) {
+            return word.length === 5 && /^[A-Z]+$/.test(word);
+        }
+
+        // Sprawdź zgadywanie i oznacz kafelki
+        function checkGuess(guess, row) {
+            const letters = guess.split('');
+            const targetLetters = currentWord.split('');
+            const result = ['absent', 'absent', 'absent', 'absent', 'absent'];
+            
+            // Najpierw oznacz dokładne dopasowania
+            for (let i = 0; i < 5; i++) {
+                if (letters[i] === targetLetters[i]) {
+                    result[i] = 'correct';
+                    targetLetters[i] = null; // Usuń użytą literę
+                }
+            }
+            
+            // Następnie sprawdź obecne litery w złych pozycjach
+            for (let i = 0; i < 5; i++) {
+                if (result[i] === 'absent' && targetLetters.includes(letters[i])) {
+                    result[i] = 'present';
+                    targetLetters[targetLetters.indexOf(letters[i])] = null;
+                }
+            }
+            
+            // Animuj kafelki
+            letters.forEach((letter, index) => {
+                const tile = row.children[index];
+                setTimeout(() => {
+                    tile.classList.add(result[index]);
+                    updateKeyboard(letter, result[index]);
+                }, index * 100);
+            });
+        }
+
+        // Aktualizuj klawiaturę
+        function updateKeyboard(letter, result) {
+            const key = keyboard.querySelector(`[data-key="${letter.toLowerCase()}"]`);
+            if (key) {
+                const currentClass = key.classList.contains('correct') ? 'correct' :
+                                   key.classList.contains('present') ? 'present' : 'none';
+                
+                if (result === 'correct' || (result === 'present' && currentClass !== 'correct')) {
+                    key.classList.remove('absent', 'present', 'correct');
+                    key.classList.add(result);
+                } else if (result === 'absent' && currentClass === 'none') {
+                    key.classList.add('absent');
+                }
+            }
+        }
+
+        // Pokaż wiadomość
+        function showMessage(text) {
+            message.textContent = text;
+            message.classList.add('show');
+            setTimeout(() => {
+                message.classList.remove('show');
+            }, 2000);
+        }
+
+        // Uruchom grę
+        init();
+    </script>
+</body>
+</html>
