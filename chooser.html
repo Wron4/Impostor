@@ -83,10 +83,12 @@
             // Zmniejszanie innych kółek - odwrotne easeInOut dla efektu zanikania
             const shrinkRadius = touch.radius * (1 - easeInOut);
             
-            ctx.beginPath();
-            ctx.arc(touch.x, touch.y, shrinkRadius, 0, Math.PI * 2);
-            ctx.fillStyle = touch.color;
-            ctx.fill();
+            if (shrinkRadius > 0.5) { // Rysuj tylko jeśli promień jest większy niż 0.5
+              ctx.beginPath();
+              ctx.arc(touch.x, touch.y, shrinkRadius, 0, Math.PI * 2);
+              ctx.fillStyle = touch.color;
+              ctx.fill();
+            }
           }
         }
         
@@ -147,10 +149,13 @@
           const winnerIndex = Math.floor(Math.random() * touchArray.length);
           winnerTouch = touchArray[winnerIndex];
           
+          // WAŻNE: Ustaw początkowy promień zwycięzcy na jego aktualny rozmiar
+          winnerAnimationRadius = winnerTouch.radius;
+          
           // Płynne przejście do animacji zwycięzcy
           pulsingAnimation = false;
           winnerAnimation = true;
-          winnerAnimationStartTime = currentTime; // używamy aktualnego czasu
+          winnerAnimationStartTime = currentTime;
           backgroundColorChanged = true;
         } else {
           // Jeśli nie ma wystarczającej liczby kółek, zakończ pulsowanie
