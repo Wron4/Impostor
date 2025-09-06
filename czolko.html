@@ -1,6 +1,6 @@
 <html lang="pl"><head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Gra w Czółko</title>
     <style>
         * {
@@ -9,329 +9,412 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+```
+    body {
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        user-select: none;
+        -webkit-user-select: none;
+        position: relative;
+    }
 
-        .container {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
+    .container {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
 
-        .screen {
-            display: none;
-            width: 100%;
-            height: 100%;
-            align-items: center;
-            justify-content: center;
+    .screen {
+        display: none;
+        width: 100%;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .screen.active {
+        display: flex;
+    }
+
+    .welcome-screen {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 40px 30px;
+        max-width: 600px;
+        width: 100%;
+        margin: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+        color: #333;
+        margin-bottom: 30px;
+        font-size: clamp(1.8em, 5vw, 2.5em);
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .instructions {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
+        border-left: 5px solid #667eea;
+    }
+
+    .instructions h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: clamp(1.2em, 4vw, 1.5em);
+    }
+
+    .instruction-item {
+        display: flex;
+        align-items: center;
+        margin: 15px 0;
+        padding: 15px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .side-indicator {
+        width: 60px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        font-size: 0.9em;
+        flex-shrink: 0;
+    }
+
+    .left-side {
+        background: #ff6b6b;
+    }
+
+    .right-side {
+        background: #4ecdc4;
+    }
+
+    .instruction-item div:last-child {
+        flex: 1;
+        min-width: 200px;
+        text-align: left;
+    }
+
+    .start-button {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 20px 40px;
+        font-size: clamp(1.2em, 4vw, 1.5em);
+        border-radius: 50px;
+        cursor: pointer;
+        margin-top: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .start-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+
+    .game-screen {
+        position: relative;
+        cursor: pointer;
+        overflow: hidden;
+    }
+
+    .game-area {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .timer {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: clamp(1.2em, 4vw, 1.8em);
+        font-weight: bold;
+        color: #333;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .timer.warning {
+        background: #ff6b6b;
+        color: white;
+        animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+
+    .word {
+        font-size: clamp(2em, 8vw, 4em);
+        font-weight: bold;
+        color: white;
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        padding: 30px 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        animation: wordAppear 0.5s ease-out;
+        max-width: 90%;
+        text-align: center;
+        word-break: break-word;
+    }
+
+    @keyframes wordAppear {
+        from {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .click-zones {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    .click-zone {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 50%;
+        pointer-events: all;
+        transition: background-color 0.2s ease;
+    }
+
+    .click-zone.left {
+        left: 0;
+        background: rgba(255, 107, 107, 0);
+    }
+
+    .click-zone.right {
+        right: 0;
+        background: rgba(78, 205, 196, 0);
+    }
+
+    .click-zone.left:active {
+        background: rgba(255, 107, 107, 0.3);
+    }
+
+    .click-zone.right:active {
+        background: rgba(78, 205, 196, 0.3);
+    }
+
+    .round-counter {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: clamp(1em, 3vw, 1.5em);
+        font-weight: bold;
+        color: #333;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .results-screen {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 30px 20px;
+        max-width: 700px;
+        width: 100%;
+        margin: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .results-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .score {
+        font-size: clamp(2em, 6vw, 3em);
+        color: #667eea;
+        font-weight: bold;
+        margin: 20px 0;
+    }
+
+    .results-list {
+        margin: 30px 0;
+    }
+
+    .result-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 10px;
+        font-size: clamp(1em, 3vw, 1.2em);
+    }
+
+    .result-item.correct {
+        background: #d4edda;
+        border-left: 5px solid #4ecdc4;
+    }
+
+    .result-item.incorrect {
+        background: #f8d7da;
+        border-left: 5px solid #ff6b6b;
+    }
+
+    .result-status {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        margin-right: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .result-status.correct {
+        background: #4ecdc4;
+    }
+
+    .result-status.incorrect {
+        background: #ff6b6b;
+    }
+
+    .play-again-button {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: clamp(1.1em, 3vw, 1.3em);
+        border-radius: 25px;
+        cursor: pointer;
+        margin-top: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .play-again-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Responsywność dla małych ekranów */
+    @media (max-height: 600px) {
+        .game-area {
+            padding: 10px 0;
+        }
+        
+        .timer, .round-counter {
+            font-size: 1.2em;
+            padding: 8px 15px;
+            top: 10px;
+        }
+        
+        .timer {
+            right: 10px;
+        }
+        
+        .round-counter {
+            left: 10px;
+        }
+        
+        .word {
+            font-size: clamp(1.5em, 6vw, 2.5em);
+            padding: 20px 15px;
+        }
+    }
+
+    /* Dodatkowe style dla bardzo małych ekranów */
+    @media (max-width: 480px) {
+        .welcome-screen {
+            padding: 30px 20px;
+            margin: 10px;
+        }
+        
+        .instructions {
+            padding: 15px;
+        }
+        
+        .instruction-item {
             flex-direction: column;
             text-align: center;
-            padding: 20px;
         }
-
-        .screen.active {
-            display: flex;
+        
+        .instruction-item div:last-child {
+            text-align: center;
+            min-width: auto;
         }
-
-        .welcome-screen {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 600px;
-            margin: 0 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        
+        .results-screen {
+            padding: 20px 15px;
+            margin: 10px;
         }
+    }
 
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    /* Orientacja pozioma na urządzeniach mobilnych */
+    @media (orientation: landscape) and (max-height: 500px) {
+        .welcome-screen, .results-screen {
+            max-height: 95vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
-
+        
         .instructions {
-            background: #f8f9fa;
-            padding: 30px;
-            border-radius: 15px;
-            margin: 20px 0;
-            border-left: 5px solid #667eea;
-        }
-
-        .instructions h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-
-        .instruction-item {
-            display: flex;
-            align-items: center;
             margin: 15px 0;
             padding: 15px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-
-        .side-indicator {
-            width: 60px;
-            height: 40px;
-            margin-right: 20px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            font-size: 0.9em;
-        }
-
-        .left-side {
-            background: #ff6b6b;
-        }
-
-        .right-side {
-            background: #4ecdc4;
-        }
-
-        .start-button {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 20px 40px;
-            font-size: 1.5em;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-top: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .start-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-        }
-
-        .game-screen {
-            position: relative;
-            cursor: pointer;
-        }
-
-        .game-area {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .timer {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px 25px;
-            border-radius: 25px;
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #333;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            min-width: 80px;
-            text-align: center;
-        }
-
-        .timer.warning {
-            background: #ff6b6b;
-            color: white;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        .word {
-            font-size: 4em;
-            font-weight: bold;
-            color: white;
-            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            animation: wordAppear 0.5s ease-out;
-        }
-
-        @keyframes wordAppear {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .click-zones {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .click-zone {
-            position: absolute;
-            top: 0;
-            height: 100%;
-            width: 50%;
-            pointer-events: all;
-            transition: background-color 0.2s ease;
-        }
-
-        .click-zone.left {
-            left: 0;
-            background: rgba(255, 107, 107, 0);
-        }
-
-        .click-zone.right {
-            right: 0;
-            background: rgba(78, 205, 196, 0);
-        }
-
-        .click-zone.left:active {
-            background: rgba(255, 107, 107, 0.3);
-        }
-
-        .click-zone.right:active {
-            background: rgba(78, 205, 196, 0.3);
-        }
-
-        .round-counter {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px 25px;
-            border-radius: 25px;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #333;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .results-screen {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 700px;
-            margin: 0 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .results-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .score {
-            font-size: 3em;
-            color: #667eea;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-
-        .results-list {
-            margin: 30px 0;
-        }
-
-        .result-item {
-            display: flex;
-            align-items: center;
-            padding: 15px;
+        
+        .instruction-item {
             margin: 10px 0;
-            border-radius: 10px;
-            font-size: 1.2em;
+            padding: 10px;
         }
+    }
+</style>
+```
 
-        .result-item.correct {
-            background: #d4edda;
-            border-left: 5px solid #4ecdc4;
-        }
-
-        .result-item.incorrect {
-            background: #f8d7da;
-            border-left: 5px solid #ff6b6b;
-        }
-
-        .result-status {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            margin-right: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .result-status.correct {
-            background: #4ecdc4;
-        }
-
-        .result-status.incorrect {
-            background: #ff6b6b;
-        }
-
-        .play-again-button {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.3em;
-            border-radius: 25px;
-            cursor: pointer;
-            margin-top: 20px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .play-again-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        @media (max-height: 600px) {
-            .word {
-                font-size: 3em;
-                padding: 30px;
-            }
-            
-            .timer, .round-counter {
-                font-size: 1.5em;
-                padding: 10px 20px;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -350,7 +433,7 @@
                         <div>Kliknij prawą stronę ekranu, gdy ktoś ODGADŁ słowo</div>
                     </div>
                 </div>
-                <p style="margin: 20px 0; font-size: 1.1em; color: #666;">
+                <p style="margin: 20px 0; font-size: clamp(0.9em, 3vw, 1.1em); color: #666;">
                     📱 Trzymaj telefon poziomo<br>
                     ⏰ 10 rund, każde słowo ma swój czas<br>
                     🎯 Zbieraj punkty za odgadnięte słowa!
@@ -359,224 +442,238 @@
             </div>
         </div>
 
-        <!-- Ekran gry -->
-        <div class="screen" id="game-screen">
-            <div class="game-area">
-                <div class="round-counter" id="round-counter">Runda 1/10</div>
-                <div class="timer" id="timer">30</div>
-                <div class="word" id="current-word">SŁOWO</div>
-                <div class="click-zones">
-                    <div class="click-zone left" onclick="passWord()"></div>
-                    <div class="click-zone right" onclick="guessWord()"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ekran wyników -->
-        <div class="screen" id="results-screen">
-            <div class="results-screen">
-                <div class="results-header">
-                    <h1>🏆 Wyniki</h1>
-                    <div class="score" id="final-score">0/10</div>
-                    <p id="score-text">Gratulacje!</p>
-                </div>
-                <div class="results-list" id="results-list">
-                    <!-- Wyniki będą dodane przez JavaScript -->
-                </div>
-                <button class="play-again-button" onclick="resetGame()">ZAGRAJ PONOWNIE</button>
+```
+    <!-- Ekran gry -->
+    <div class="screen" id="game-screen">
+        <div class="game-area">
+            <div class="round-counter" id="round-counter">Runda 1/10</div>
+            <div class="timer" id="timer">30</div>
+            <div class="word" id="current-word">SŁOWO</div>
+            <div class="click-zones">
+                <div class="click-zone left" onclick="passWord()"></div>
+                <div class="click-zone right" onclick="guessWord()"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Lista słów do gry
-        const words = [
-            "SŁOŃ", "SAMOLOT", "PIZZA", "GITARA", "KOMPUTER",
-            "KSIĄŻKA", "ROWER", "KWIATY", "OCEAN", "ZAMEK",
-            "POCIĄG", "TELEFON", "DRZEWO", "MOTYL", "GÓRĘ",
-            "CIASTKO", "PARASOL", "KLUCZ", "BUTY", "ŚWIECA",
-            "KACZKA", "BALON", "PUDEŁKO", "ZEGAR", "MOST",
-            "ŁAWKA", "KAPELUSZ", "LUSTRO", "NOŻYCE", "PIÓRO"
-        ];
+    <!-- Ekran wyników -->
+    <div class="screen" id="results-screen">
+        <div class="results-screen">
+            <div class="results-header">
+                <h1>🏆 Wyniki</h1>
+                <div class="score" id="final-score">0/10</div>
+                <p id="score-text">Gratulacje!</p>
+            </div>
+            <div class="results-list" id="results-list">
+                <!-- Wyniki będą dodane przez JavaScript -->
+            </div>
+            <button class="play-again-button" onclick="resetGame()">ZAGRAJ PONOWNIE</button>
+        </div>
+    </div>
+</div>
 
-        let currentRound = 1;
-        let timeLeft = 30;
-        let currentWordIndex = 0;
-        let gameWords = [];
-        let results = [];
-        let timer;
-        let gameActive = false;
+<script>
+    // Lista słów do gry
+    const words = [
+        "SŁOŃ", "SAMOLOT", "PIZZA", "GITARA", "KOMPUTER",
+        "KSIĄŻKA", "ROWER", "KWIATY", "OCEAN", "ZAMEK",
+        "POCIĄG", "TELEFON", "DRZEWO", "MOTYL", "GÓRA",
+        "CIASTKO", "PARASOL", "KLUCZ", "BUTY", "ŚWIECA",
+        "KACZKA", "BALON", "PUDEŁKO", "ZEGAR", "MOST",
+        "ŁAWKA", "KAPELUSZ", "LUSTRO", "NOŻYCE", "PIÓRO"
+    ];
 
-        // Funkcje do zarządzania ekranami
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
-            });
-            document.getElementById(screenId).classList.add('active');
-        }
+    let currentRound = 1;
+    let timeLeft = 30;
+    let currentWordIndex = 0;
+    let gameWords = [];
+    let results = [];
+    let timer;
+    let gameActive = false;
 
-        // Losowanie słów na grę
-        function selectRandomWords() {
-            const shuffled = [...words].sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, 10);
-        }
-
-        // Rozpoczęcie gry
-        function startGame() {
-            gameWords = selectRandomWords();
-            currentRound = 1;
-            currentWordIndex = 0;
-            results = [];
-            gameActive = true;
-            
-            showScreen('game-screen');
-            startRound();
-        }
-
-        // Rozpoczęcie rundy
-        function startRound() {
-            if (currentRound > 10) {
-                endGame();
-                return;
-            }
-
-            timeLeft = 30;
-            document.getElementById('round-counter').textContent = `Runda ${currentRound}/10`;
-            document.getElementById('current-word').textContent = gameWords[currentWordIndex];
-            document.getElementById('timer').textContent = timeLeft;
-            document.getElementById('timer').classList.remove('warning');
-
-            startTimer();
-        }
-
-        // Timer
-        function startTimer() {
-            timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').textContent = timeLeft;
-                
-                if (timeLeft <= 10) {
-                    document.getElementById('timer').classList.add('warning');
-                }
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    // Automatyczne przejście do następnego słowa po czasie
-                    results.push({
-                        word: gameWords[currentWordIndex],
-                        status: 'timeout'
-                    });
-                    nextRound();
-                }
-            }, 1000);
-        }
-
-        // Gdy gracz pasuje
-        function passWord() {
-            if (!gameActive) return;
-            
-            clearInterval(timer);
-            results.push({
-                word: gameWords[currentWordIndex],
-                status: 'pass'
-            });
-            nextRound();
-        }
-
-        // Gdy ktoś odgadł
-        function guessWord() {
-            if (!gameActive) return;
-            
-            clearInterval(timer);
-            results.push({
-                word: gameWords[currentWordIndex],
-                status: 'correct'
-            });
-            nextRound();
-        }
-
-        // Przejście do następnej rundy
-        function nextRound() {
-            currentRound++;
-            currentWordIndex++;
-            
-            setTimeout(() => {
-                startRound();
-            }, 500);
-        }
-
-        // Koniec gry
-        function endGame() {
-            gameActive = false;
-            showScreen('results-screen');
-            displayResults();
-        }
-
-        // Wyświetlanie wyników
-        function displayResults() {
-            const correctAnswers = results.filter(r => r.status === 'correct').length;
-            const totalRounds = results.length;
-            
-            document.getElementById('final-score').textContent = `${correctAnswers}/10`;
-            
-            let scoreText = '';
-            if (correctAnswers >= 8) {
-                scoreText = '🌟 Doskonały wynik!';
-            } else if (correctAnswers >= 6) {
-                scoreText = '👏 Świetna gra!';
-            } else if (correctAnswers >= 4) {
-                scoreText = '👍 Dobra robota!';
-            } else {
-                scoreText = '💪 Następnym razem będzie lepiej!';
-            }
-            
-            document.getElementById('score-text').textContent = scoreText;
-
-            // Lista wyników
-            const resultsList = document.getElementById('results-list');
-            resultsList.innerHTML = '';
-            
-            results.forEach((result, index) => {
-                const resultItem = document.createElement('div');
-                resultItem.className = `result-item ${result.status === 'correct' ? 'correct' : 'incorrect'}`;
-                
-                const statusIcon = result.status === 'correct' ? '✓' : 
-                                 result.status === 'pass' ? '↷' : '⏱';
-                const statusText = result.status === 'correct' ? 'ODGADNIĘTO' :
-                                 result.status === 'pass' ? 'PASOWANO' : 'CZAS MINĄŁ';
-                
-                resultItem.innerHTML = `
-                    <div class="result-status ${result.status === 'correct' ? 'correct' : 'incorrect'}">
-                        ${statusIcon}
-                    </div>
-                    <div>
-                        <strong>${result.word}</strong> - ${statusText}
-                    </div>
-                `;
-                
-                resultsList.appendChild(resultItem);
-            });
-        }
-
-        // Reset gry
-        function resetGame() {
-            clearInterval(timer);
-            showScreen('welcome-screen');
-            gameActive = false;
-        }
-
-        // Zapobieganie przypadkowemu odświeżeniu strony
-        window.addEventListener('beforeunload', function (e) {
-            if (gameActive) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
+    // Funkcje do zarządzania ekranami
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
         });
+        document.getElementById(screenId).classList.add('active');
+    }
 
-        // Blokowanie przewijania na urządzeniach mobilnych
-        document.addEventListener('touchmove', function(e) {
+    // Losowanie słów na grę
+    function selectRandomWords() {
+        const shuffled = [...words].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, 10);
+    }
+
+    // Rozpoczęcie gry
+    function startGame() {
+        gameWords = selectRandomWords();
+        currentRound = 1;
+        currentWordIndex = 0;
+        results = [];
+        gameActive = true;
+        
+        showScreen('game-screen');
+        startRound();
+    }
+
+    // Rozpoczęcie rundy
+    function startRound() {
+        if (currentRound > 10) {
+            endGame();
+            return;
+        }
+
+        timeLeft = 30;
+        document.getElementById('round-counter').textContent = `Runda ${currentRound}/10`;
+        document.getElementById('current-word').textContent = gameWords[currentWordIndex];
+        document.getElementById('timer').textContent = timeLeft;
+        document.getElementById('timer').classList.remove('warning');
+
+        startTimer();
+    }
+
+    // Timer
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer').textContent = timeLeft;
+            
+            if (timeLeft <= 10) {
+                document.getElementById('timer').classList.add('warning');
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                // Automatyczne przejście do następnego słowa po czasie
+                results.push({
+                    word: gameWords[currentWordIndex],
+                    status: 'timeout'
+                });
+                nextRound();
+            }
+        }, 1000);
+    }
+
+    // Gdy gracz pasuje
+    function passWord() {
+        if (!gameActive) return;
+        
+        clearInterval(timer);
+        results.push({
+            word: gameWords[currentWordIndex],
+            status: 'pass'
+        });
+        nextRound();
+    }
+
+    // Gdy ktoś odgadł
+    function guessWord() {
+        if (!gameActive) return;
+        
+        clearInterval(timer);
+        results.push({
+            word: gameWords[currentWordIndex],
+            status: 'correct'
+        });
+        nextRound();
+    }
+
+    // Przejście do następnej rundy
+    function nextRound() {
+        currentRound++;
+        currentWordIndex++;
+        
+        setTimeout(() => {
+            startRound();
+        }, 500);
+    }
+
+    // Koniec gry
+    function endGame() {
+        gameActive = false;
+        showScreen('results-screen');
+        displayResults();
+    }
+
+    // Wyświetlanie wyników
+    function displayResults() {
+        const correctAnswers = results.filter(r => r.status === 'correct').length;
+        const totalRounds = results.length;
+        
+        document.getElementById('final-score').textContent = `${correctAnswers}/10`;
+        
+        let scoreText = '';
+        if (correctAnswers >= 8) {
+            scoreText = '🌟 Doskonały wynik!';
+        } else if (correctAnswers >= 6) {
+            scoreText = '👏 Świetna gra!';
+        } else if (correctAnswers >= 4) {
+            scoreText = '👍 Dobra robota!';
+        } else {
+            scoreText = '💪 Następnym razem będzie lepiej!';
+        }
+        
+        document.getElementById('score-text').textContent = scoreText;
+
+        // Lista wyników
+        const resultsList = document.getElementById('results-list');
+        resultsList.innerHTML = '';
+        
+        results.forEach((result, index) => {
+            const resultItem = document.createElement('div');
+            resultItem.className = `result-item ${result.status === 'correct' ? 'correct' : 'incorrect'}`;
+            
+            const statusIcon = result.status === 'correct' ? '✓' : 
+                             result.status === 'pass' ? '↷' : '⏱';
+            const statusText = result.status === 'correct' ? 'ODGADNIĘTO' :
+                             result.status === 'pass' ? 'PASOWANO' : 'CZAS MINĄŁ';
+            
+            resultItem.innerHTML = `
+                <div class="result-status ${result.status === 'correct' ? 'correct' : 'incorrect'}">
+                    ${statusIcon}
+                </div>
+                <div>
+                    <strong>${result.word}</strong> - ${statusText}
+                </div>
+            `;
+            
+            resultsList.appendChild(resultItem);
+        });
+    }
+
+    // Reset gry
+    function resetGame() {
+        clearInterval(timer);
+        showScreen('welcome-screen');
+        gameActive = false;
+    }
+
+    // Zapobieganie przypadkowemu odświeżeniu strony
+    window.addEventListener('beforeunload', function (e) {
+        if (gameActive) {
             e.preventDefault();
-        }, { passive: false });
-    </script>
+            e.returnValue = '';
+        }
+    });
+
+    // Obsługa orientacji urządzenia
+    function handleOrientationChange() {
+        // Małe opóźnienie aby pozwolić przeglądarce na dostosowanie się
+        setTimeout(() => {
+            // Wymuszenie ponownego przeliczenia wysokości viewport
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }, 100);
+    }
+
+    // Nasłuchiwanie zmian orientacji
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
+
+    // Inicjalne ustawienie wysokości viewport
+    handleOrientationChange();
+</script>
+```
 
 </body></html>
