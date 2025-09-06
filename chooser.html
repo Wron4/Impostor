@@ -157,6 +157,9 @@
           winnerAnimation = true;
           winnerAnimationStartTime = currentTime;
           backgroundColorChanged = true;
+          
+          // WAŻNE: Kontynuuj animację w następnej klatce
+          animationId = requestAnimationFrame(drawCircles);
         } else {
           // Jeśli nie ma wystarczającej liczby kółek, zakończ pulsowanie
           pulsingAnimation = false;
