@@ -137,7 +137,7 @@
           ctx.fillStyle = touch.color;
           ctx.fill();
           
-          // Zachowaj aktualny promień dla płynnego przejścia do animacji zwycięzcy
+          // WAŻNE: Zachowaj aktualny promień dla płynnego przejścia
           touch.radius = pulsedRadius;
         }
         
@@ -149,8 +149,8 @@
           const winnerIndex = Math.floor(Math.random() * touchArray.length);
           winnerTouch = touchArray[winnerIndex];
           
-          // WAŻNE: Ustaw początkowy promień zwycięzcy na jego aktualny rozmiar
-          winnerAnimationRadius = winnerTouch.radius;
+          // WAŻNE: Zachowaj ostatni rozmiar z pulsowania jako punkt startowy
+          // nie zmieniamy winnerTouch.radius - zostanie taki jaki był na końcu pulsowania
           
           // Płynne przejście do animacji zwycięzcy
           pulsingAnimation = false;
@@ -158,8 +158,9 @@
           winnerAnimationStartTime = currentTime;
           backgroundColorChanged = true;
           
-          // WAŻNE: Kontynuuj animację w następnej klatce
-          animationId = requestAnimationFrame(drawCircles);
+          // Kontynuuj animację natychmiast - bez przerwy
+          drawCircles();
+          return;
         } else {
           // Jeśli nie ma wystarczającej liczby kółek, zakończ pulsowanie
           pulsingAnimation = false;
