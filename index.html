@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -10,224 +11,235 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            color: white;
-        }
 
+```
+    body {
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: white;
+    }
+
+    .menu-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 900px;
+        width: 100%;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 50px;
+    }
+
+    h1 {
+        font-size: 3em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        margin-bottom: 10px;
+    }
+
+    .subtitle {
+        font-size: 1.2em;
+        opacity: 0.8;
+        font-style: italic;
+    }
+
+    .games-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+    }
+
+    .game-tile {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        padding: 30px;
+        border: 2px solid transparent;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .game-tile::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .game-tile:hover::before {
+        left: 100%;
+    }
+
+    .game-tile:hover {
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-10px) scale(1.03);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .game-tile:active {
+        transform: translateY(-5px) scale(1.01);
+    }
+
+    .tile-content {
+        display: flex;
+        align-items: center;
+        gap: 25px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .game-emoji {
+        font-size: 4em;
+        animation: bounce 2s infinite;
+        transition: transform 0.3s ease;
+    }
+
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+
+    .game-tile:hover .game-emoji {
+        animation: none;
+        transform: scale(1.2) rotate(10deg);
+    }
+
+    .game-info {
+        flex: 1;
+    }
+
+    .game-title {
+        font-size: 2em;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .game-description {
+        font-size: 1em;
+        opacity: 0.9;
+        line-height: 1.4;
+    }
+
+    .impostor-tile {
+        background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(238, 90, 82, 0.2));
+    }
+
+    .impostor-tile:hover {
+        background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(238, 90, 82, 0.3));
+    }
+
+    .chooser-tile {
+        background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(68, 160, 141, 0.2));
+    }
+
+    .chooser-tile:hover {
+        background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(68, 160, 141, 0.3));
+    }
+
+    .wordle-tile {
+        background: linear-gradient(135deg, rgba(106, 90, 205, 0.2), rgba(147, 51, 234, 0.2));
+    }
+
+    .wordle-tile:hover {
+        background: linear-gradient(135deg, rgba(106, 90, 205, 0.3), rgba(147, 51, 234, 0.3));
+    }
+
+    .czolko-tile {
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.2));
+    }
+
+    .czolko-tile:hover {
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.3), rgba(255, 152, 0, 0.3));
+    }
+
+    .github-link {
+        text-align: center;
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .github-link a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        font-size: 0.9em;
+        transition: color 0.3s ease;
+    }
+
+    .github-link a:hover {
+        color: white;
+    }
+
+    @media (max-width: 768px) {
         .menu-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 900px;
-            width: 100%;
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 50px;
+            padding: 30px 20px;
         }
 
         h1 {
-            font-size: 3em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.8;
-            font-style: italic;
+            font-size: 2.2em;
         }
 
         .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .game-tile {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 30px;
-            border: 2px solid transparent;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-            display: block;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .game-tile::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: left 0.5s;
-        }
-
-        .game-tile:hover::before {
-            left: 100%;
-        }
-
-        .game-tile:hover {
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-10px) scale(1.03);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .game-tile:active {
-            transform: translateY(-5px) scale(1.01);
+            grid-template-columns: 1fr;
+            gap: 20px;
         }
 
         .tile-content {
-            display: flex;
-            align-items: center;
-            gap: 25px;
-            position: relative;
-            z-index: 2;
+            flex-direction: column;
+            text-align: center;
+            gap: 15px;
         }
 
         .game-emoji {
-            font-size: 4em;
-            animation: bounce 2s infinite;
-            transition: transform 0.3s ease;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(-10px);
-            }
-            60% {
-                transform: translateY(-5px);
-            }
-        }
-
-        .game-tile:hover .game-emoji {
-            animation: none;
-            transform: scale(1.2) rotate(10deg);
-        }
-
-        .game-info {
-            flex: 1;
+            font-size: 3em;
         }
 
         .game-title {
-            font-size: 2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            font-size: 1.6em;
         }
+    }
+</style>
+```
 
-        .game-description {
-            font-size: 1em;
-            opacity: 0.9;
-            line-height: 1.4;
-        }
-
-        .impostor-tile {
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(238, 90, 82, 0.2));
-        }
-
-        .impostor-tile:hover {
-            background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(238, 90, 82, 0.3));
-        }
-
-        .chooser-tile {
-            background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(68, 160, 141, 0.2));
-        }
-
-        .chooser-tile:hover {
-            background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(68, 160, 141, 0.3));
-        }
-
-        .wordle-tile {
-            background: linear-gradient(135deg, rgba(106, 90, 205, 0.2), rgba(147, 51, 234, 0.2));
-        }
-
-        .wordle-tile:hover {
-            background: linear-gradient(135deg, rgba(106, 90, 205, 0.3), rgba(147, 51, 234, 0.3));
-        }
-
-        .github-link {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .github-link a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.9em;
-            transition: color 0.3s ease;
-        }
-
-        .github-link a:hover {
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .menu-container {
-                padding: 30px 20px;
-            }
-
-            h1 {
-                font-size: 2.2em;
-            }
-
-            .games-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-
-            .tile-content {
-                flex-direction: column;
-                text-align: center;
-                gap: 15px;
-            }
-
-            .game-emoji {
-                font-size: 3em;
-            }
-
-            .game-title {
-                font-size: 1.6em;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="menu-container">
@@ -236,188 +248,204 @@
             <p class="subtitle">Wybierz grę i baw się dobrze!</p>
         </div>
 
-        <div class="games-grid">
-            <a href="impostor.html" class="game-tile impostor-tile">
-                <div class="tile-content">
-                    <div class="game-emoji">🕵️</div>
-                    <div class="game-info">
-                        <h2 class="game-title">IMPOSTOR</h2>
-                        <p class="game-description">
-                            Gra towarzyska, gdzie jeden z graczy jest impostorem. 
-                            Znajdź kto kłamie i nie daj się złapać!
-                        </p>
-                    </div>
+```
+    <div class="games-grid">
+        <a href="impostor.html" class="game-tile impostor-tile">
+            <div class="tile-content">
+                <div class="game-emoji">🕵️</div>
+                <div class="game-info">
+                    <h2 class="game-title">IMPOSTOR</h2>
+                    <p class="game-description">
+                        Gra towarzyska, gdzie jeden z graczy jest impostorem. 
+                        Znajdź kto kłamie i nie daj się złapać!
+                    </p>
                 </div>
-            </a>
+            </div>
+        </a>
 
-            <a href="chooser.html" class="game-tile chooser-tile">
-                <div class="tile-content">
-                    <div class="game-emoji">🎯</div>
-                    <div class="game-info">
-                        <h2 class="game-title">CHOOSER</h2>
-                        <p class="game-description">
-                            Losowy wybór z opcji. Pozwól grze zdecydować 
-                            za Ciebie w trudnych wyborach!
-                        </p>
-                    </div>
+        <a href="chooser.html" class="game-tile chooser-tile">
+            <div class="tile-content">
+                <div class="game-emoji">🎯</div>
+                <div class="game-info">
+                    <h2 class="game-title">CHOOSER</h2>
+                    <p class="game-description">
+                        Losowy wybór z opcji. Pozwól grze zdecydować 
+                        za Ciebie w trudnych wyborach!
+                    </p>
                 </div>
-            </a>
+            </div>
+        </a>
 
-            <a href="wordle.html" class="game-tile wordle-tile">
-                <div class="tile-content">
-                    <div class="game-emoji">🔤</div>
-                    <div class="game-info">
-                        <h2 class="game-title">DOSŁOWNIE</h2>
-                        <p class="game-description">
-                            Odgadnij ukryte słowo w 6 próbach! 
-                            Polski ripoff popularnej gry słownej.
-                        </p>
-                    </div>
+        <a href="wordle.html" class="game-tile wordle-tile">
+            <div class="tile-content">
+                <div class="game-emoji">🔤</div>
+                <div class="game-info">
+                    <h2 class="game-title">DOSŁOWNIE</h2>
+                    <p class="game-description">
+                        Odgadnij ukryte słowo w 6 próbach! 
+                        Polski ripoff popularnej gry słownej.
+                    </p>
                 </div>
-            </a>
-        </div>
+            </div>
+        </a>
 
-        <div class="github-link">
-            <p><a href="https://github.com/twoj-username" target="_blank">🔗 Zobacz kod na GitHub</a></p>
-        </div>
+        <a href="czolko.html" class="game-tile czolko-tile">
+            <div class="tile-content">
+                <div class="game-emoji">🎪</div>
+                <div class="game-info">
+                    <h2 class="game-title">CZÓŁKO</h2>
+                    <p class="game-description">
+                        Klasyczna gra towarzyska! Odgadnij co masz 
+                        na czole zadając pytania tak/nie.
+                    </p>
+                </div>
+            </div>
+        </a>
     </div>
 
-    <script>
-        // Sprawdzenie czy to urządzenie mobilne
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        document.querySelectorAll('.game-tile').forEach((tile, index) => {
-            if (isMobile) {
-                // Animacje dotykowe dla mobilnych
-                tile.addEventListener('touchstart', function(e) {
-                    this.style.transform = 'scale(0.95)';
-                    this.style.transition = 'transform 0.1s ease';
-                    
-                    // Wibracja przy dotknięciu (jeśli dostępna)
-                    if ('vibrate' in navigator) {
-                        navigator.vibrate(50);
-                    }
-                });
+    <div class="github-link">
+        <p><a href="https://github.com/twoj-username" target="_blank">🔗 Zobacz kod na GitHub</a></p>
+    </div>
+</div>
 
-                tile.addEventListener('touchend', function(e) {
-                    this.style.transform = '';
-                    this.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-                });
-
-                // Animacja sekwencyjna przy załadowaniu
-                tile.style.opacity = '0';
-                tile.style.transform = 'translateY(50px)';
+<script>
+    // Sprawdzenie czy to urządzenie mobilne
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    document.querySelectorAll('.game-tile').forEach((tile, index) => {
+        if (isMobile) {
+            // Animacje dotykowe dla mobilnych
+            tile.addEventListener('touchstart', function(e) {
+                this.style.transform = 'scale(0.95)';
+                this.style.transition = 'transform 0.1s ease';
                 
-                setTimeout(() => {
-                    tile.style.transition = 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-                    tile.style.opacity = '1';
-                    tile.style.transform = 'translateY(0)';
-                }, index * 200);
+                // Wibracja przy dotknięciu (jeśli dostępna)
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                }
+            });
 
-            } else {
-                // Animacje desktop
-                tile.addEventListener('click', function(e) {
-                    this.style.transform = 'translateY(-5px) scale(0.98)';
-                    setTimeout(() => {
-                        this.style.transform = '';
-                    }, 150);
-                });
+            tile.addEventListener('touchend', function(e) {
+                this.style.transform = '';
+                this.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            });
+
+            // Animacja sekwencyjna przy załadowaniu
+            tile.style.opacity = '0';
+            tile.style.transform = 'translateY(50px)';
+            
+            setTimeout(() => {
+                tile.style.transition = 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                tile.style.opacity = '1';
+                tile.style.transform = 'translateY(0)';
+            }, index * 200);
+
+        } else {
+            // Animacje desktop
+            tile.addEventListener('click', function(e) {
+                this.style.transform = 'translateY(-5px) scale(0.98)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        }
+    });
+
+    // Animacja parallax tylko dla desktop
+    if (!isMobile) {
+        document.addEventListener('mousemove', function(e) {
+            const emojis = document.querySelectorAll('.game-emoji');
+            const mouseX = e.clientX / window.innerWidth;
+            const mouseY = e.clientY / window.innerHeight;
+            
+            emojis.forEach(emoji => {
+                const rect = emoji.getBoundingClientRect();
+                const emojiX = (rect.left + rect.width / 2) / window.innerWidth;
+                const emojiY = (rect.top + rect.height / 2) / window.innerHeight;
+                
+                const deltaX = (mouseX - emojiX) * 10;
+                const deltaY = (mouseY - emojiY) * 10;
+                
+                emoji.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            });
+        });
+    }
+
+    // Animacja emoji na mobilnych przy scrollu
+    if (isMobile) {
+        let ticking = false;
+        
+        function updateEmojis() {
+            const emojis = document.querySelectorAll('.game-emoji');
+            const scrollY = window.scrollY;
+            
+            emojis.forEach((emoji, index) => {
+                const rect = emoji.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                
+                if (isVisible) {
+                    const rotation = (scrollY * 0.1) + (index * 45);
+                    const scale = 1 + Math.sin(Date.now() * 0.002 + index) * 0.1;
+                    emoji.style.transform = `rotate(${rotation}deg) scale(${scale})`;
+                }
+            });
+            
+            ticking = false;
+        }
+        
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(updateEmojis);
+                ticking = true;
             }
         });
+    }
 
-        // Animacja parallax tylko dla desktop
-        if (!isMobile) {
-            document.addEventListener('mousemove', function(e) {
-                const emojis = document.querySelectorAll('.game-emoji');
-                const mouseX = e.clientX / window.innerWidth;
-                const mouseY = e.clientY / window.innerHeight;
+    // Efekt ripple dla mobilnych
+    if (isMobile) {
+        document.querySelectorAll('.game-tile').forEach(tile => {
+            tile.addEventListener('touchstart', function(e) {
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.touches[0].clientX - rect.left - size / 2;
+                const y = e.touches[0].clientY - rect.top - size / 2;
                 
-                emojis.forEach(emoji => {
-                    const rect = emoji.getBoundingClientRect();
-                    const emojiX = (rect.left + rect.width / 2) / window.innerWidth;
-                    const emojiY = (rect.top + rect.height / 2) / window.innerHeight;
-                    
-                    const deltaX = (mouseX - emojiX) * 10;
-                    const deltaY = (mouseY - emojiY) * 10;
-                    
-                    emoji.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-                });
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple');
+                
+                // Style dla ripple
+                ripple.style.position = 'absolute';
+                ripple.style.borderRadius = '50%';
+                ripple.style.background = 'rgba(255, 255, 255, 0.3)';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'ripple 0.6s linear';
+                ripple.style.pointerEvents = 'none';
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
             });
-        }
-
-        // Animacja emoji na mobilnych przy scrollu
-        if (isMobile) {
-            let ticking = false;
-            
-            function updateEmojis() {
-                const emojis = document.querySelectorAll('.game-emoji');
-                const scrollY = window.scrollY;
-                
-                emojis.forEach((emoji, index) => {
-                    const rect = emoji.getBoundingClientRect();
-                    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-                    
-                    if (isVisible) {
-                        const rotation = (scrollY * 0.1) + (index * 45);
-                        const scale = 1 + Math.sin(Date.now() * 0.002 + index) * 0.1;
-                        emoji.style.transform = `rotate(${rotation}deg) scale(${scale})`;
-                    }
-                });
-                
-                ticking = false;
+        });
+        
+        // CSS dla ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
             }
-            
-            window.addEventListener('scroll', function() {
-                if (!ticking) {
-                    requestAnimationFrame(updateEmojis);
-                    ticking = true;
-                }
-            });
-        }
+        `;
+        document.head.appendChild(style);
+    }
+</script>
+```
 
-        // Efekt ripple dla mobilnych
-        if (isMobile) {
-            document.querySelectorAll('.game-tile').forEach(tile => {
-                tile.addEventListener('touchstart', function(e) {
-                    const ripple = document.createElement('span');
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.touches[0].clientX - rect.left - size / 2;
-                    const y = e.touches[0].clientY - rect.top - size / 2;
-                    
-                    ripple.style.width = ripple.style.height = size + 'px';
-                    ripple.style.left = x + 'px';
-                    ripple.style.top = y + 'px';
-                    ripple.classList.add('ripple');
-                    
-                    // Style dla ripple
-                    ripple.style.position = 'absolute';
-                    ripple.style.borderRadius = '50%';
-                    ripple.style.background = 'rgba(255, 255, 255, 0.3)';
-                    ripple.style.transform = 'scale(0)';
-                    ripple.style.animation = 'ripple 0.6s linear';
-                    ripple.style.pointerEvents = 'none';
-                    
-                    this.appendChild(ripple);
-                    
-                    setTimeout(() => {
-                        ripple.remove();
-                    }, 600);
-                });
-            });
-            
-            // CSS dla ripple animation
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes ripple {
-                    to {
-                        transform: scale(2);
-                        opacity: 0;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    </script>
 </body>
 </html>
