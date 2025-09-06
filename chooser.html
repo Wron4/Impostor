@@ -25,7 +25,7 @@
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  const touches = {}; // { id: { x, y, color, radius, targetRadius, createdAt } }
+  const touches = {}; // { id: { x, y, targetX, targetY, color, radius, targetRadius, createdAt } }
 
   let freezeCheckTimeout = null;
   let freezeTriggered = false;
@@ -34,12 +34,20 @@
   let winnerTouch = null;
   let winnerAnimationStartTime = 0;
   let winnerAnimationRadius = 0;
+  let animationId = null;
+
+  // Parametry wygładzania
+  const smoothingFactor = 0.15; // Im niższa wartość, tym bardziej płynne (0.1-0.3)
 
   function getRandomColor() {
     const r = Math.floor(Math.random() * 200) + 30;
     const g = Math.floor(Math.random() * 200) + 30;
     const b = Math.floor(Math.random() * 200) + 30;
     return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  function lerp(start, end, factor) {
+    return start + (end - start) * factor;
   }
 
   function drawCircles() {
@@ -83,21 +91,35 @@
           }
         }
         
-        requestAnimationFrame(drawCircles);
+        animationId = requestAnimationFrame(drawCircles);
       } else {
         // Po zakończeniu animacji ustaw tło na kolor zwycięskiego kółka
         document.body.style.backgroundColor = winnerTouch.color;
         // Zakończ animację
         winnerAnimation = false;
+        animationId = null;
       }
     } else {
-      // Normalne rysowanie kółek z animacją wejścia
+      // Normalne rysowanie kółek z animacją wejścia i wygładzaniem ruchu
       let animationInProgress = false;
       
       for (const id in touches) {
         const touch = touches[id];
         
-        // Aktualizacja promienia dla animacji
+        // Wygładzanie pozycji - interpolacja między aktualną a docelową pozycją
+        if (touch.targetX !== undefined && touch.targetY !== undefined) {
+          touch.x = lerp(touch.x, touch.targetX, smoothingFactor);
+          touch.y = lerp(touch.y, touch.targetY, smoothingFactor);
+          
+          // Sprawdź czy pozycja się nadal zmienia
+          const dx = Math.abs(touch.x - touch.targetX);
+          const dy = Math.abs(touch.y - touch.targetY);
+          if (dx > 0.1 || dy > 0.1) {
+            animationInProgress = true;
+          }
+        }
+        
+        // Aktualizacja promienia dla animacji wejścia
         const elapsedTime = currentTime - touch.createdAt;
         const animDuration = 500; // czas trwania animacji w ms
         
@@ -120,8 +142,16 @@
       
       // Wywołaj ponownie rysowanie, jeśli jakakolwiek animacja jest w trakcie
       if (animationInProgress) {
-        requestAnimationFrame(drawCircles);
+        animationId = requestAnimationFrame(drawCircles);
+      } else {
+        animationId = null;
       }
+    }
+  }
+
+  function startAnimation() {
+    if (!animationId) {
+      animationId = requestAnimationFrame(drawCircles);
     }
   }
 
@@ -138,7 +168,7 @@
       backgroundColorChanged = true;
       
       // Uruchom animację
-      requestAnimationFrame(drawCircles);
+      startAnimation();
     }
   }
 
@@ -165,13 +195,15 @@
       touches[touch.identifier] = {
         x: touch.clientX,
         y: touch.clientY,
+        targetX: touch.clientX,
+        targetY: touch.clientY,
         color: getRandomColor(),
         radius: 0, // Początkowy promień
         targetRadius: 60, // Docelowy promień
         createdAt: Date.now() // Czas utworzenia dla animacji
       };
     }
-    drawCircles();
+    startAnimation();
     resetFreezeCheck();
   }
 
@@ -182,11 +214,12 @@
     for (let i = 0; i < event.touches.length; i++) {
       const touch = event.touches[i];
       if (touches[touch.identifier]) {
-        touches[touch.identifier].x = touch.clientX;
-        touches[touch.identifier].y = touch.clientY;
+        // Ustaw docelową pozycję zamiast natychmiastowej zmiany
+        touches[touch.identifier].targetX = touch.clientX;
+        touches[touch.identifier].targetY = touch.clientY;
       }
     }
-    drawCircles();
+    startAnimation();
   }
 
   function handleTouchEnd(event) {
@@ -196,7 +229,7 @@
       const touch = event.changedTouches[i];
       delete touches[touch.identifier];
     }
-    drawCircles();
+    startAnimation();
     resetFreezeCheck();
   }
 
@@ -214,13 +247,15 @@
     mouseDown = true;
     touches['mouse'] = { 
       x: e.clientX, 
-      y: e.clientY, 
+      y: e.clientY,
+      targetX: e.clientX,
+      targetY: e.clientY,
       color: getRandomColor(),
       radius: 0, // Początkowy promień
       targetRadius: 30, // Docelowy promień
       createdAt: Date.now() // Czas utworzenia dla animacji
     };
-    drawCircles();
+    startAnimation();
     resetFreezeCheck();
   });
 
@@ -228,9 +263,10 @@
     if (winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy myszy po rozpoczęciu animacji zwycięzcy
     
     if (mouseDown) {
-      touches['mouse'].x = e.clientX;
-      touches['mouse'].y = e.clientY;
-      drawCircles();
+      // Ustaw docelową pozycję zamiast natychmiastowej zmiany
+      touches['mouse'].targetX = e.clientX;
+      touches['mouse'].targetY = e.clientY;
+      startAnimation();
     }
   });
 
@@ -239,14 +275,14 @@
     
     mouseDown = false;
     delete touches['mouse'];
-    drawCircles();
+    startAnimation();
     resetFreezeCheck();
   });
 
   window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    drawCircles();
+    startAnimation();
   });
 
   // Dodanie przycisku reset dla testowania (opcjonalne)
@@ -261,11 +297,15 @@
     backgroundColorChanged = false;
     winnerAnimation = false;
     winnerTouch = null;
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
     for (const id in touches) {
       delete touches[id];
     }
     document.body.style.backgroundColor = '';
-    drawCircles();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   });
   document.body.appendChild(resetButton);
 </script>
