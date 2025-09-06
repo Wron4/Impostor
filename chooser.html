@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Dotykowe kółka</title>
+  <title>Bouncy Dotykowe kółka</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       touch-action: none;
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 100%);
     }
     canvas {
       display: block;
@@ -25,7 +26,8 @@
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  const touches = {}; // { id: { x, y, targetX, targetY, color, radius, targetRadius, createdAt } }
+  const touches = {}; // { id: { x, y, targetX, targetY, vx, vy, color, radius, targetRadius, createdAt, pulsePhase, glowIntensity } }
+  const particles = []; // Cząsteczki dla efektów wizualnych
 
   let freezeCheckTimeout = null;
   let freezeTriggered = false;
@@ -36,111 +38,288 @@
   let winnerAnimationRadius = 0;
   let animationId = null;
 
-  // Parametry wygładzania
-  const smoothingFactor = 0.15; // Im niższa wartość, tym bardziej płynne (0.1-0.3)
+  // Parametry fizyki i animacji
+  const springStrength = 0.08;
+  const damping = 0.85;
+  const minRadius = 40;
+  const maxRadius = 80;
 
   function getRandomColor() {
-    const r = Math.floor(Math.random() * 200) + 30;
-    const g = Math.floor(Math.random() * 200) + 30;
-    const b = Math.floor(Math.random() * 200) + 30;
-    return `rgb(${r}, ${g}, ${b})`;
+    const colors = [
+      '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', 
+      '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f',
+      '#bb8fce', '#85c1e9', '#f8c471', '#82e0aa'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
   }
 
-  function lerp(start, end, factor) {
-    return start + (end - start) * factor;
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  // Bouncy easing functions
+  function easeOutBounce(t) {
+    if (t < (1/2.75)) {
+      return 7.5625 * t * t;
+    } else if (t < (2/2.75)) {
+      return 7.5625 * (t -= (1.5/2.75)) * t + 0.75;
+    } else if (t < (2.5/2.75)) {
+      return 7.5625 * (t -= (2.25/2.75)) * t + 0.9375;
+    } else {
+      return 7.5625 * (t -= (2.625/2.75)) * t + 0.984375;
+    }
+  }
+
+  function easeOutElastic(t) {
+    return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+  }
+
+  // Klasa cząsteczki
+  class Particle {
+    constructor(x, y, color) {
+      this.x = x;
+      this.y = y;
+      this.vx = (Math.random() - 0.5) * 8;
+      this.vy = (Math.random() - 0.5) * 8;
+      this.life = 1.0;
+      this.decay = Math.random() * 0.02 + 0.01;
+      this.color = color;
+      this.size = Math.random() * 4 + 2;
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vx *= 0.98;
+      this.vy *= 0.98;
+      this.life -= this.decay;
+      this.size *= 0.99;
+    }
+
+    draw(ctx) {
+      ctx.save();
+      ctx.globalAlpha = this.life;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    isDead() {
+      return this.life <= 0;
+    }
+  }
+
+  function createParticles(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+      particles.push(new Particle(x, y, color));
+    }
   }
 
   function drawCircles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Gradient background effect
+    const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height));
+    gradient.addColorStop(0, 'rgba(26, 26, 46, 0.8)');
+    gradient.addColorStop(1, 'rgba(22, 33, 62, 0.9)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     const currentTime = Date.now();
     
     if (winnerAnimation) {
-      // Animacja zwycięskiego kółka
+      // Spektakularna animacja zwycięskiego kółka
       const elapsedTime = currentTime - winnerAnimationStartTime;
-      const animDuration = 2000; // czas trwania animacji rozszerzania w ms
+      const animDuration = 3000;
       
       if (elapsedTime < animDuration) {
-        // Obliczanie rozmiaru rozszerzającego się kółka
         const progress = elapsedTime / animDuration;
-        const easeInOut = progress < 0.5 
-          ? 2 * progress * progress 
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
         
-        // Maksymalny promień to przekątna ekranu
-        const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-        winnerAnimationRadius = winnerTouch.radius + easeInOut * (maxRadius - winnerTouch.radius);
+        // Wieloetapowa animacja
+        let easeProgress;
+        if (progress < 0.3) {
+          // Faza 1: Elastic grow
+          easeProgress = easeOutElastic(progress / 0.3);
+          winnerAnimationRadius = winnerTouch.radius * (1 + easeProgress * 2);
+        } else if (progress < 0.7) {
+          // Faza 2: Stabilizacja z pulsowaniem
+          const pulseProgress = (progress - 0.3) / 0.4;
+          const pulse = Math.sin(pulseProgress * Math.PI * 8) * 0.3 + 1;
+          winnerAnimationRadius = winnerTouch.radius * 3 * pulse;
+        } else {
+          // Faza 3: Wybuch do pełnego ekranu
+          const explodeProgress = (progress - 0.7) / 0.3;
+          const easeExplode = easeOutBounce(explodeProgress);
+          const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
+          winnerAnimationRadius = winnerTouch.radius * 3 + easeExplode * (maxRadius - winnerTouch.radius * 3);
+        }
         
-        // Rysowanie zwycięskiego kółka
+        // Efekt świecenia
+        const rgb = hexToRgb(winnerTouch.color);
+        const glowSize = winnerAnimationRadius * 1.2;
+        
+        // Zewnętrzny glow
+        const glowGradient = ctx.createRadialGradient(
+          winnerTouch.x, winnerTouch.y, winnerAnimationRadius * 0.5,
+          winnerTouch.x, winnerTouch.y, glowSize
+        );
+        glowGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`);
+        glowGradient.addColorStop(0.7, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`);
+        glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.beginPath();
+        ctx.arc(winnerTouch.x, winnerTouch.y, glowSize, 0, Math.PI * 2);
+        ctx.fillStyle = glowGradient;
+        ctx.fill();
+        
+        // Główne kółko
         ctx.beginPath();
         ctx.arc(winnerTouch.x, winnerTouch.y, winnerAnimationRadius, 0, Math.PI * 2);
         ctx.fillStyle = winnerTouch.color;
         ctx.fill();
         
-        // Rysowanie pozostałych kółek, które się zmniejszają
+        // Rysowanie zmniejszających się kółek
         for (const id in touches) {
           const touch = touches[id];
           if (touch !== winnerTouch) {
-            // Zmniejszanie innych kółek - odwrotne easeInOut dla efektu zanikania
-            const shrinkRadius = touch.radius * (1 - easeInOut);
-            
-            ctx.beginPath();
-            ctx.arc(touch.x, touch.y, shrinkRadius, 0, Math.PI * 2);
-            ctx.fillStyle = touch.color;
-            ctx.fill();
+            const shrinkRadius = touch.radius * (1 - progress);
+            if (shrinkRadius > 0) {
+              ctx.save();
+              ctx.globalAlpha = 1 - progress;
+              ctx.beginPath();
+              ctx.arc(touch.x, touch.y, shrinkRadius, 0, Math.PI * 2);
+              ctx.fillStyle = touch.color;
+              ctx.fill();
+              ctx.restore();
+            }
           }
+        }
+        
+        // Generuj cząsteczki podczas animacji
+        if (Math.random() < 0.3) {
+          const angle = Math.random() * Math.PI * 2;
+          const distance = winnerAnimationRadius * 0.8;
+          const px = winnerTouch.x + Math.cos(angle) * distance;
+          const py = winnerTouch.y + Math.sin(angle) * distance;
+          createParticles(px, py, winnerTouch.color, 3);
         }
         
         animationId = requestAnimationFrame(drawCircles);
       } else {
-        // Po zakończeniu animacji ustaw tło na kolor zwycięskiego kółka
-        document.body.style.backgroundColor = winnerTouch.color;
-        // Zakończ animację
+        document.body.style.background = winnerTouch.color;
         winnerAnimation = false;
         animationId = null;
       }
     } else {
-      // Normalne rysowanie kółek z animacją wejścia i wygładzaniem ruchu
+      // Normalne rysowanie z fizyka sprężynową
       let animationInProgress = false;
       
       for (const id in touches) {
         const touch = touches[id];
         
-        // Wygładzanie pozycji - interpolacja między aktualną a docelową pozycją
+        // Fizyka sprężynowa dla pozycji
         if (touch.targetX !== undefined && touch.targetY !== undefined) {
-          touch.x = lerp(touch.x, touch.targetX, smoothingFactor);
-          touch.y = lerp(touch.y, touch.targetY, smoothingFactor);
+          const dx = touch.targetX - touch.x;
+          const dy = touch.targetY - touch.y;
           
-          // Sprawdź czy pozycja się nadal zmienia
-          const dx = Math.abs(touch.x - touch.targetX);
-          const dy = Math.abs(touch.y - touch.targetY);
-          if (dx > 0.1 || dy > 0.1) {
+          // Siła sprężynowa
+          touch.vx = (touch.vx || 0) + dx * springStrength;
+          touch.vy = (touch.vy || 0) + dy * springStrength;
+          
+          // Tłumienie
+          touch.vx *= damping;
+          touch.vy *= damping;
+          
+          // Aktualizacja pozycji
+          touch.x += touch.vx;
+          touch.y += touch.vy;
+          
+          // Sprawdź czy animacja się toczy
+          if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1 || Math.abs(touch.vx) > 0.1 || Math.abs(touch.vy) > 0.1) {
             animationInProgress = true;
           }
         }
         
-        // Aktualizacja promienia dla animacji wejścia
+        // Pulsująca animacja rozmiaru
+        touch.pulsePhase = (touch.pulsePhase || 0) + 0.1;
+        const pulseFactor = Math.sin(touch.pulsePhase) * 0.1 + 1;
+        
+        // Bouncy animacja wejścia
         const elapsedTime = currentTime - touch.createdAt;
-        const animDuration = 500; // czas trwania animacji w ms
+        const animDuration = 800;
         
         if (elapsedTime < animDuration) {
-          // Animacja wejścia - płynne powiększanie
           const progress = elapsedTime / animDuration;
-          const easeOut = 1 - Math.pow(1 - progress, 3);
-          touch.radius = touch.targetRadius * easeOut;
+          const bounceProgress = easeOutBounce(progress);
+          touch.radius = touch.targetRadius * bounceProgress * pulseFactor;
           animationInProgress = true;
+          
+          // Generuj cząsteczki przy tworzeniu
+          if (Math.random() < 0.1) {
+            createParticles(touch.x, touch.y, touch.color, 2);
+          }
         } else {
-          touch.radius = touch.targetRadius;
+          touch.radius = touch.targetRadius * pulseFactor;
         }
         
-        // Rysowanie koła
+        // Efekt świecenia
+        touch.glowIntensity = (touch.glowIntensity || 0) + 0.05;
+        const glowPulse = Math.sin(touch.glowIntensity) * 0.3 + 0.7;
+        const rgb = hexToRgb(touch.color);
+        
+        // Rysowanie glow
+        const glowGradient = ctx.createRadialGradient(
+          touch.x, touch.y, touch.radius * 0.3,
+          touch.x, touch.y, touch.radius * 1.5
+        );
+        glowGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
+        glowGradient.addColorStop(0.7, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.2 * glowPulse})`);
+        glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.beginPath();
+        ctx.arc(touch.x, touch.y, touch.radius * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = glowGradient;
+        ctx.fill();
+        
+        // Główne kółko z gradientem
+        const mainGradient = ctx.createRadialGradient(
+          touch.x - touch.radius * 0.3, touch.y - touch.radius * 0.3, 0,
+          touch.x, touch.y, touch.radius
+        );
+        mainGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        mainGradient.addColorStop(0.7, touch.color);
+        mainGradient.addColorStop(1, `rgba(${rgb.r * 0.7}, ${rgb.g * 0.7}, ${rgb.b * 0.7}, 1)`);
+        
         ctx.beginPath();
         ctx.arc(touch.x, touch.y, touch.radius, 0, Math.PI * 2);
-        ctx.fillStyle = touch.color;
+        ctx.fillStyle = mainGradient;
+        ctx.fill();
+        
+        // Highlight
+        ctx.beginPath();
+        ctx.arc(touch.x - touch.radius * 0.3, touch.y - touch.radius * 0.3, touch.radius * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.fill();
       }
       
-      // Wywołaj ponownie rysowanie, jeśli jakakolwiek animacja jest w trakcie
+      // Aktualizacja i rysowanie cząsteczek
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const particle = particles[i];
+        particle.update();
+        particle.draw(ctx);
+        
+        if (particle.isDead()) {
+          particles.splice(i, 1);
+        } else {
+          animationInProgress = true;
+        }
+      }
+      
       if (animationInProgress) {
         animationId = requestAnimationFrame(drawCircles);
       } else {
@@ -158,16 +337,16 @@
   function fillScreenWithRandomTouchColor() {
     const touchArray = Object.values(touches);
     if (touchArray.length >= 2 && !backgroundColorChanged) {
-      // Wybierz losowe kółko jako zwycięzcę
       const winnerIndex = Math.floor(Math.random() * touchArray.length);
       winnerTouch = touchArray[winnerIndex];
       
-      // Rozpocznij animację zwycięskiego kółka
+      // Wybuch cząsteczek
+      createParticles(winnerTouch.x, winnerTouch.y, winnerTouch.color, 20);
+      
       winnerAnimation = true;
       winnerAnimationStartTime = Date.now();
       backgroundColorChanged = true;
       
-      // Uruchom animację
       startAnimation();
     }
   }
@@ -187,94 +366,128 @@
   }
 
   function handleTouchStart(event) {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj nowe dotknięcia po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     event.preventDefault();
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
+      const color = getRandomColor();
       touches[touch.identifier] = {
         x: touch.clientX,
         y: touch.clientY,
         targetX: touch.clientX,
         targetY: touch.clientY,
-        color: getRandomColor(),
-        radius: 0, // Początkowy promień
-        targetRadius: 60, // Docelowy promień
-        createdAt: Date.now() // Czas utworzenia dla animacji
+        vx: 0,
+        vy: 0,
+        color: color,
+        radius: 0,
+        targetRadius: Math.random() * (maxRadius - minRadius) + minRadius,
+        createdAt: Date.now(),
+        pulsePhase: Math.random() * Math.PI * 2,
+        glowIntensity: 0
       };
+      
+      // Efekt pojawienia się
+      createParticles(touch.clientX, touch.clientY, color, 12);
     }
     startAnimation();
     resetFreezeCheck();
   }
 
   function handleTouchMove(event) {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     event.preventDefault();
     for (let i = 0; i < event.touches.length; i++) {
       const touch = event.touches[i];
       if (touches[touch.identifier]) {
-        // Ustaw docelową pozycję zamiast natychmiastowej zmiany
         touches[touch.identifier].targetX = touch.clientX;
         touches[touch.identifier].targetY = touch.clientY;
+        
+        // Losowe cząsteczki podczas ruchu
+        if (Math.random() < 0.05) {
+          createParticles(touch.clientX, touch.clientY, touches[touch.identifier].color, 1);
+        }
       }
     }
     startAnimation();
   }
 
   function handleTouchEnd(event) {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj zakończenia dotknięć po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
-      delete touches[touch.identifier];
+      if (touches[touch.identifier]) {
+        // Efekt zniknięcia
+        createParticles(
+          touches[touch.identifier].x, 
+          touches[touch.identifier].y, 
+          touches[touch.identifier].color, 
+          8
+        );
+        delete touches[touch.identifier];
+      }
     }
     startAnimation();
     resetFreezeCheck();
   }
 
-  // Dotyk
+  // Event listeners
   canvas.addEventListener('touchstart', handleTouchStart, false);
   canvas.addEventListener('touchmove', handleTouchMove, false);
   canvas.addEventListener('touchend', handleTouchEnd, false);
   canvas.addEventListener('touchcancel', handleTouchEnd, false);
 
-  // Mysz (dla PC)
+  // Mysz
   let mouseDown = false;
   canvas.addEventListener('mousedown', (e) => {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj kliknięcia po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     mouseDown = true;
+    const color = getRandomColor();
     touches['mouse'] = { 
       x: e.clientX, 
       y: e.clientY,
       targetX: e.clientX,
       targetY: e.clientY,
-      color: getRandomColor(),
-      radius: 0, // Początkowy promień
-      targetRadius: 30, // Docelowy promień
-      createdAt: Date.now() // Czas utworzenia dla animacji
+      vx: 0,
+      vy: 0,
+      color: color,
+      radius: 0,
+      targetRadius: Math.random() * (maxRadius - minRadius) + minRadius,
+      createdAt: Date.now(),
+      pulsePhase: Math.random() * Math.PI * 2,
+      glowIntensity: 0
     };
+    
+    createParticles(e.clientX, e.clientY, color, 10);
     startAnimation();
     resetFreezeCheck();
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy myszy po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
-    if (mouseDown) {
-      // Ustaw docelową pozycję zamiast natychmiastowej zmiany
+    if (mouseDown && touches['mouse']) {
       touches['mouse'].targetX = e.clientX;
       touches['mouse'].targetY = e.clientY;
+      
+      if (Math.random() < 0.03) {
+        createParticles(e.clientX, e.clientY, touches['mouse'].color, 1);
+      }
       startAnimation();
     }
   });
 
   canvas.addEventListener('mouseup', () => {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj zdarzenia po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     mouseDown = false;
-    delete touches['mouse'];
+    if (touches['mouse']) {
+      createParticles(touches['mouse'].x, touches['mouse'].y, touches['mouse'].color, 6);
+      delete touches['mouse'];
+    }
     startAnimation();
     resetFreezeCheck();
   });
@@ -285,18 +498,29 @@
     startAnimation();
   });
 
-  // Dodanie przycisku reset dla testowania (opcjonalne)
+  // Reset button
   const resetButton = document.createElement('button');
-  resetButton.innerText = 'Reset';
-  resetButton.style.position = 'fixed';
-  resetButton.style.bottom = '10px';
-  resetButton.style.right = '10px';
-  resetButton.style.zIndex = '10';
+  resetButton.innerText = '🔄 Reset';
+  resetButton.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+  `;
+  
   resetButton.addEventListener('click', () => {
-    // Reset stanu aplikacji
     backgroundColorChanged = false;
     winnerAnimation = false;
     winnerTouch = null;
+    particles.length = 0;
     if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
@@ -304,10 +528,41 @@
     for (const id in touches) {
       delete touches[id];
     }
-    document.body.style.backgroundColor = '';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.body.style.background = 'radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 100%)';
+    
+    // Efekt resetu
+    for (let i = 0; i < 50; i++) {
+      setTimeout(() => {
+        createParticles(
+          Math.random() * canvas.width,
+          Math.random() * canvas.height,
+          getRandomColor(),
+          2
+        );
+      }, i * 10);
+    }
+    
+    startAnimation();
   });
+  
   document.body.appendChild(resetButton);
+
+  // Stały subtle ruch tła
+  function backgroundAnimation() {
+    if (!winnerAnimation && Object.keys(touches).length === 0 && particles.length === 0) {
+      if (Math.random() < 0.001) {
+        createParticles(
+          Math.random() * canvas.width,
+          Math.random() * canvas.height,
+          getRandomColor(),
+          1
+        );
+        startAnimation();
+      }
+    }
+    requestAnimationFrame(backgroundAnimation);
+  }
+  backgroundAnimation();
 </script>
 </body>
 </html>
