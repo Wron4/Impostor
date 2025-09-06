@@ -364,7 +364,7 @@
   // Mysz (dla PC)
   let mouseDown = false;
   canvas.addEventListener('mousedown', (e) => {
-    if (countdownActive || pulseAnimationActive || winnerAnimation || backgroundColorChanged) return; // Ignoruj kliknięcia podczas animacji
+    if (winnerAnimation && backgroundColorChanged) return; // Ignoruj tylko po zakończeniu całej animacji
     
     mouseDown = true;
     touches['mouse'] = { 
@@ -384,7 +384,7 @@
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    if (countdownActive || pulseAnimationActive || winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy myszy podczas animacji
+    if (winnerAnimation && backgroundColorChanged) return; // Ignoruj tylko po zakończeniu całej animacji
     
     if (mouseDown) {
       // Ustaw docelową pozycję zamiast natychmiastowej zmiany
@@ -395,7 +395,7 @@
   });
 
   canvas.addEventListener('mouseup', () => {
-    if (countdownActive || pulseAnimationActive || winnerAnimation || backgroundColorChanged) return; // Ignoruj zdarzenia podczas animacji
+    if (winnerAnimation && backgroundColorChanged) return; // Ignoruj tylko po zakończeniu całej animacji
     
     mouseDown = false;
     delete touches['mouse'];
