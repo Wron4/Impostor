@@ -25,10 +25,11 @@
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  const touches = {}; // { id: { x, y, targetX, targetY, vx, vy, color, radius, targetRadius, createdAt } }
+  const touches = {}; // { id: { x, y, targetX, targetY, vx, vy, color, radius, targetRadius, baseRadius, createdAt } }
 
   let freezeCheckTimeout = null;
   let freezeTriggered = false;
+  let countdownStartTime = null;
   let backgroundColorChanged = false;
   let winnerAnimation = false;
   let winnerTouch = null;
@@ -126,19 +127,39 @@
           }
         }
         
-        // Aktualizacja promienia dla animacji wejścia
+        // Aktualizacja promienia dla animacji wejścia i odliczania
         const elapsedTime = currentTime - touch.createdAt;
         const animDuration = 500; // czas trwania animacji w ms
+        
+        let currentRadius = touch.targetRadius;
         
         if (elapsedTime < animDuration) {
           // Animacja wejścia - płynne powiększanie
           const progress = elapsedTime / animDuration;
           const easeOut = 1 - Math.pow(1 - progress, 3);
-          touch.radius = touch.targetRadius * easeOut;
+          currentRadius = touch.targetRadius * easeOut;
           animationInProgress = true;
-        } else {
-          touch.radius = touch.targetRadius;
         }
+        
+        // INDYKATOR ODLICZANIA - powiększanie kółek podczas countdown
+        if (countdownStartTime && Object.keys(touches).length >= 2) {
+          const countdownElapsed = currentTime - countdownStartTime;
+          const countdownDuration = 3000; // 3 sekundy
+          
+          if (countdownElapsed < countdownDuration) {
+            const countdownProgress = countdownElapsed / countdownDuration;
+            
+            // Pulsujący efekt z rosnącym rozmiarem
+            const pulseFreq = 8; // częstotliwość pulsowania
+            const pulse = Math.sin(countdownProgress * pulseFreq * Math.PI) * 0.3 + 1;
+            const growthFactor = 1 + countdownProgress * 0.8; // rośnie do 180% rozmiaru
+            
+            currentRadius = touch.baseRadius * growthFactor * pulse;
+            animationInProgress = true;
+          }
+        }
+        
+        touch.radius = currentRadius;
         
         // Rysowanie koła
         ctx.beginPath();
@@ -182,8 +203,12 @@
   function resetFreezeCheck() {
     if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
     freezeTriggered = false;
+    countdownStartTime = null;
 
     if (Object.keys(touches).length >= 2) {
+      countdownStartTime = Date.now(); // Rozpocznij odliczanie wizualne!
+      startAnimation(); // Uruchom animację dla indykatora
+      
       freezeCheckTimeout = setTimeout(() => {
         if (!freezeTriggered) {
           freezeTriggered = true;
@@ -209,6 +234,7 @@
         color: getRandomColor(),
         radius: 0, // Początkowy promień
         targetRadius: 60, // Docelowy promień
+        baseRadius: 60, // Bazowy promień dla odliczania
         createdAt: Date.now() // Czas utworzenia dla animacji
       };
     }
@@ -264,6 +290,7 @@
       color: getRandomColor(),
       radius: 0, // Początkowy promień
       targetRadius: 30, // Docelowy promień
+      baseRadius: 30, // Bazowy promień dla odliczania
       createdAt: Date.now() // Czas utworzenia dla animacji
     };
     startAnimation();
@@ -323,7 +350,7 @@
     backgroundColorChanged = false;
     winnerAnimation = false;
     winnerTouch = null;
-    countdownStartTime = null;
+    countdownStartTime = null; // Reset countdown
     if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
