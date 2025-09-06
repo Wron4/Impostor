@@ -31,18 +31,12 @@
   let freezeTriggered = false;
   let backgroundColorChanged = false;
   let winnerAnimation = false;
+  let pulsingAnimation = false;
+  let pulsingStartTime = 0;
   let winnerTouch = null;
   let winnerAnimationStartTime = 0;
   let winnerAnimationRadius = 0;
   let animationId = null;
-  
-  // Nowe zmienne dla animacji odliczania
-  let countdownActive = false;
-  let countdownStartTime = 0;
-  let countdownDuration = 3000; // 3 sekundy
-  let pulseAnimationActive = false;
-  let pulseAnimationStartTime = 0;
-  let pulseAnimationDuration = 3000; // 3 sekundy na 3 pulsy
 
   // Parametry fizyki sprężynowej
   const springStrength = 0.08;
@@ -55,69 +49,12 @@
     return `rgb(${r}, ${g}, ${b})`;
   }
 
-  function drawCountdown(progress) {
-    // Oblicz aktualną liczbę do wyświetlenia (3, 2, 1)
-    const countNumber = Math.ceil((1 - progress) * 3);
-    
-    // Rysuj liczbę na środku ekranu
-    ctx.save();
-    ctx.font = 'bold 120px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Efekt pulsowania liczby
-    const pulseProgress = (Math.sin(progress * Math.PI * 6) + 1) / 2;
-    const alpha = 0.3 + pulseProgress * 0.7;
-    
-    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-    ctx.fillText(countNumber.toString(), canvas.width / 2, canvas.height / 2);
-    
-    // Dodaj cień dla lepszej widoczności
-    ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.5})`;
-    ctx.fillText(countNumber.toString(), canvas.width / 2 + 3, canvas.height / 2 + 3);
-    
-    ctx.restore();
-  }
-
   function drawCircles() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const currentTime = Date.now();
     
-    if (countdownActive) {
-      // Animacja odliczania
-      const elapsedTime = currentTime - countdownStartTime;
-      const progress = Math.min(elapsedTime / countdownDuration, 1);
-      
-      // Rysuj normalne kółka
-      drawNormalCircles(currentTime);
-      
-      // Rysuj odliczanie
-      drawCountdown(progress);
-      
-      if (progress >= 1) {
-        // Zakończ odliczanie, rozpocznij pulsowanie
-        countdownActive = false;
-        pulseAnimationActive = true;
-        pulseAnimationStartTime = currentTime;
-      }
-      
-      animationId = requestAnimationFrame(drawCircles);
-    } else if (pulseAnimationActive) {
-      // Animacja pulsowania przed wyborem zwycięzcy
-      const elapsedTime = currentTime - pulseAnimationStartTime;
-      const progress = elapsedTime / pulseAnimationDuration;
-      
-      if (progress < 1) {
-        drawPulsingCircles(currentTime, progress);
-        animationId = requestAnimationFrame(drawCircles);
-      } else {
-        // Zakończ pulsowanie, rozpocznij animację zwycięzcy
-        pulseAnimationActive = false;
-        startWinnerAnimation(currentTime);
-        animationId = requestAnimationFrame(drawCircles);
-      }
-    } else if (winnerAnimation) {
+    if (winnerAnimation) {
       // Animacja zwycięskiego kółka
       const elapsedTime = currentTime - winnerAnimationStartTime;
       const animDuration = 2000; // czas trwania animacji rozszerzania w ms
@@ -161,9 +98,116 @@
         winnerAnimation = false;
         animationId = null;
       }
+    } else if (pulsingAnimation) {
+      // Animacja pulsowania przed wyborem zwycięzcy
+      const elapsedTime = currentTime - pulsingStartTime;
+      const pulseDuration = 3000; // 3 sekundy pulsowania
+      
+      if (elapsedTime < pulseDuration) {
+        // Oblicz pulsowanie - 3 pulsy w ciągu 3 sekund (co sekundę)
+        const pulseProgress = (elapsedTime % 1000) / 1000; // cykl co sekundę
+        const pulseIntensity = Math.sin(pulseProgress * Math.PI); // płynne pulsowanie 0->1->0
+        const pulseScale = 1 + pulseIntensity * 0.3; // pulsowanie od 1.0 do 1.3
+        
+        // Rysuj wszystkie kółka z pulsowaniem
+        for (const id in touches) {
+          const touch = touches[id];
+          
+          // Fizyka sprężynowa dla pozycji (nadal aktywna podczas pulsowania)
+          if (touch.targetX !== undefined && touch.targetY !== undefined) {
+            const dx = touch.targetX - touch.x;
+            const dy = touch.targetY - touch.y;
+            
+            touch.vx = (touch.vx || 0) + dx * springStrength;
+            touch.vy = (touch.vy || 0) + dy * springStrength;
+            
+            touch.vx *= damping;
+            touch.vy *= damping;
+            
+            touch.x += touch.vx;
+            touch.y += touch.vy;
+          }
+          
+          // Rysowanie kółka z pulsowaniem
+          const pulsedRadius = touch.targetRadius * pulseScale;
+          ctx.beginPath();
+          ctx.arc(touch.x, touch.y, pulsedRadius, 0, Math.PI * 2);
+          ctx.fillStyle = touch.color;
+          ctx.fill();
+          
+          // Zachowaj aktualny promień dla płynnego przejścia do animacji zwycięzcy
+          touch.radius = pulsedRadius;
+        }
+        
+        animationId = requestAnimationFrame(drawCircles);
+      } else {
+        // Koniec pulsowania - wybierz zwycięzcę i rozpocznij animację wygrania
+        const touchArray = Object.values(touches);
+        if (touchArray.length >= 2) {
+          const winnerIndex = Math.floor(Math.random() * touchArray.length);
+          winnerTouch = touchArray[winnerIndex];
+          
+          // Płynne przejście do animacji zwycięzcy
+          pulsingAnimation = false;
+          winnerAnimation = true;
+          winnerAnimationStartTime = currentTime; // używamy aktualnego czasu
+          backgroundColorChanged = true;
+        } else {
+          // Jeśli nie ma wystarczającej liczby kółek, zakończ pulsowanie
+          pulsingAnimation = false;
+          animationId = null;
+        }
+      }
     } else {
       // Normalne rysowanie kółek z fizyką sprężynową
-      const animationInProgress = drawNormalCircles(currentTime);
+      let animationInProgress = false;
+      
+      for (const id in touches) {
+        const touch = touches[id];
+        
+        // Fizyka sprężynowa dla pozycji
+        if (touch.targetX !== undefined && touch.targetY !== undefined) {
+          const dx = touch.targetX - touch.x;
+          const dy = touch.targetY - touch.y;
+          
+          // Siła sprężynowa
+          touch.vx = (touch.vx || 0) + dx * springStrength;
+          touch.vy = (touch.vy || 0) + dy * springStrength;
+          
+          // Tłumienie
+          touch.vx *= damping;
+          touch.vy *= damping;
+          
+          // Aktualizacja pozycji
+          touch.x += touch.vx;
+          touch.y += touch.vy;
+          
+          // Sprawdź czy animacja się toczy
+          if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1 || Math.abs(touch.vx) > 0.1 || Math.abs(touch.vy) > 0.1) {
+            animationInProgress = true;
+          }
+        }
+        
+        // Aktualizacja promienia dla animacji wejścia
+        const elapsedTime = currentTime - touch.createdAt;
+        const animDuration = 500; // czas trwania animacji w ms
+        
+        if (elapsedTime < animDuration) {
+          // Animacja wejścia - płynne powiększanie
+          const progress = elapsedTime / animDuration;
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          touch.radius = touch.targetRadius * easeOut;
+          animationInProgress = true;
+        } else {
+          touch.radius = touch.targetRadius;
+        }
+        
+        // Rysowanie koła
+        ctx.beginPath();
+        ctx.arc(touch.x, touch.y, touch.radius, 0, Math.PI * 2);
+        ctx.fillStyle = touch.color;
+        ctx.fill();
+      }
       
       // Wywołaj ponownie rysowanie, jeśli jakakolwiek animacja jest w trakcie
       if (animationInProgress) {
@@ -174,120 +218,17 @@
     }
   }
 
-  function drawNormalCircles(currentTime) {
-    let animationInProgress = false;
-    
-    for (const id in touches) {
-      const touch = touches[id];
-      
-      // Fizyka sprężynowa dla pozycji
-      if (touch.targetX !== undefined && touch.targetY !== undefined) {
-        const dx = touch.targetX - touch.x;
-        const dy = touch.targetY - touch.y;
-        
-        // Siła sprężynowa
-        touch.vx = (touch.vx || 0) + dx * springStrength;
-        touch.vy = (touch.vy || 0) + dy * springStrength;
-        
-        // Tłumienie
-        touch.vx *= damping;
-        touch.vy *= damping;
-        
-        // Aktualizacja pozycji
-        touch.x += touch.vx;
-        touch.y += touch.vy;
-        
-        // Sprawdź czy animacja się toczy
-        if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1 || Math.abs(touch.vx) > 0.1 || Math.abs(touch.vy) > 0.1) {
-          animationInProgress = true;
-        }
-      }
-      
-      // Aktualizacja promienia dla animacji wejścia
-      const elapsedTime = currentTime - touch.createdAt;
-      const animDuration = 500; // czas trwania animacji w ms
-      
-      if (elapsedTime < animDuration) {
-        // Animacja wejścia - płynne powiększanie
-        const progress = elapsedTime / animDuration;
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        touch.radius = touch.targetRadius * easeOut;
-        animationInProgress = true;
-      } else {
-        touch.radius = touch.targetRadius;
-      }
-      
-      // Rysowanie koła
-      ctx.beginPath();
-      ctx.arc(touch.x, touch.y, touch.radius, 0, Math.PI * 2);
-      ctx.fillStyle = touch.color;
-      ctx.fill();
-    }
-    
-    return animationInProgress;
-  }
-
-  function drawPulsingCircles(currentTime, overallProgress) {
-    // 3 pulsy w ciągu 3 sekund
-    const pulseFrequency = 3;
-    const pulseProgress = Math.sin(overallProgress * Math.PI * pulseFrequency * 2);
-    const pulseMultiplier = 1 + pulseProgress * 0.3; // Pulsowanie od 1.0 do 1.3
-    
-    for (const id in touches) {
-      const touch = touches[id];
-      
-      // Fizyka sprężynowa dla pozycji (kontynuuj normalną fizykę)
-      if (touch.targetX !== undefined && touch.targetY !== undefined) {
-        const dx = touch.targetX - touch.x;
-        const dy = touch.targetY - touch.y;
-        
-        touch.vx = (touch.vx || 0) + dx * springStrength;
-        touch.vy = (touch.vy || 0) + dy * springStrength;
-        
-        touch.vx *= damping;
-        touch.vy *= damping;
-        
-        touch.x += touch.vx;
-        touch.y += touch.vy;
-      }
-      
-      // Rysowanie pulsującego koła
-      const pulsedRadius = touch.radius * pulseMultiplier;
-      ctx.beginPath();
-      ctx.arc(touch.x, touch.y, pulsedRadius, 0, Math.PI * 2);
-      ctx.fillStyle = touch.color;
-      ctx.fill();
-    }
-  }
-
-  function startWinnerAnimation(currentTime) {
-    const touchArray = Object.values(touches);
-    if (touchArray.length >= 2) {
-      // Wybierz losowe kółko jako zwycięzcę
-      const winnerIndex = Math.floor(Math.random() * touchArray.length);
-      winnerTouch = touchArray[winnerIndex];
-      
-      // Rozpocznij animację zwycięskiego kółka
-      winnerAnimation = true;
-      winnerAnimationStartTime = currentTime;
-      backgroundColorChanged = true;
-    }
-  }
-
   function startAnimation() {
     if (!animationId) {
       animationId = requestAnimationFrame(drawCircles);
     }
   }
 
-  function fillScreenWithRandomTouchColor() {
+  function startPulsingAnimation() {
     const touchArray = Object.values(touches);
-    if (touchArray.length >= 2 && !backgroundColorChanged) {
-      // Rozpocznij odliczanie
-      countdownActive = true;
-      countdownStartTime = Date.now();
-      
-      // Uruchom animację
+    if (touchArray.length >= 2 && !backgroundColorChanged && !pulsingAnimation) {
+      pulsingAnimation = true;
+      pulsingStartTime = Date.now();
       startAnimation();
     }
   }
@@ -295,19 +236,20 @@
   function resetFreezeCheck() {
     if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
     freezeTriggered = false;
+    pulsingAnimation = false; // Zatrzymaj pulsowanie jeśli ktoś zmieni dotknięcia
 
     if (Object.keys(touches).length >= 2) {
       freezeCheckTimeout = setTimeout(() => {
-        if (!freezeTriggered) {
+        if (!freezeTriggered && Object.keys(touches).length >= 2) {
           freezeTriggered = true;
-          fillScreenWithRandomTouchColor();
+          startPulsingAnimation();
         }
       }, 3000);
     }
   }
 
   function handleTouchStart(event) {
-    if (countdownActive || pulseAnimationActive || winnerAnimation || backgroundColorChanged) return; // Ignoruj nowe dotknięcia podczas animacji
+    if (winnerAnimation || backgroundColorChanged || pulsingAnimation) return;
     
     event.preventDefault();
     for (let i = 0; i < event.changedTouches.length; i++) {
@@ -320,9 +262,9 @@
         vx: 0,
         vy: 0,
         color: getRandomColor(),
-        radius: 0, // Początkowy promień
-        targetRadius: 60, // Docelowy promień
-        createdAt: Date.now() // Czas utworzenia dla animacji
+        radius: 0,
+        targetRadius: 60,
+        createdAt: Date.now()
       };
     }
     startAnimation();
@@ -330,13 +272,12 @@
   }
 
   function handleTouchMove(event) {
-    if (countdownActive || pulseAnimationActive || winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy podczas animacji
+    if (winnerAnimation || backgroundColorChanged) return;
     
     event.preventDefault();
     for (let i = 0; i < event.touches.length; i++) {
       const touch = event.touches[i];
       if (touches[touch.identifier]) {
-        // Ustaw docelową pozycję zamiast natychmiastowej zmiany
         touches[touch.identifier].targetX = touch.clientX;
         touches[touch.identifier].targetY = touch.clientY;
       }
@@ -345,14 +286,14 @@
   }
 
   function handleTouchEnd(event) {
-    if (countdownActive || pulseAnimationActive || winnerAnimation || backgroundColorChanged) return; // Ignoruj zakończenia dotknięć podczas animacji
+    if (winnerAnimation || backgroundColorChanged) return;
     
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
       delete touches[touch.identifier];
     }
     startAnimation();
-    resetFreezeCheck();
+    resetFreezeCheck(); // Sprawdź od nowa po usunięciu palca
   }
 
   // Dotyk
@@ -364,7 +305,7 @@
   // Mysz (dla PC)
   let mouseDown = false;
   canvas.addEventListener('mousedown', (e) => {
-    if (winnerAnimation && backgroundColorChanged) return; // Ignoruj tylko po zakończeniu całej animacji
+    if (winnerAnimation || backgroundColorChanged || pulsingAnimation) return;
     
     mouseDown = true;
     touches['mouse'] = { 
@@ -375,19 +316,18 @@
       vx: 0,
       vy: 0,
       color: getRandomColor(),
-      radius: 0, // Początkowy promień
-      targetRadius: 30, // Docelowy promień
-      createdAt: Date.now() // Czas utworzenia dla animacji
+      radius: 0,
+      targetRadius: 30,
+      createdAt: Date.now()
     };
     startAnimation();
     resetFreezeCheck();
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    if (winnerAnimation && backgroundColorChanged) return; // Ignoruj tylko po zakończeniu całej animacji
+    if (winnerAnimation || backgroundColorChanged) return;
     
     if (mouseDown) {
-      // Ustaw docelową pozycję zamiast natychmiastowej zmiany
       touches['mouse'].targetX = e.clientX;
       touches['mouse'].targetY = e.clientY;
       startAnimation();
@@ -395,12 +335,12 @@
   });
 
   canvas.addEventListener('mouseup', () => {
-    if (winnerAnimation && backgroundColorChanged) return; // Ignoruj tylko po zakończeniu całej animacji
+    if (winnerAnimation || backgroundColorChanged) return;
     
     mouseDown = false;
     delete touches['mouse'];
     startAnimation();
-    resetFreezeCheck();
+    resetFreezeCheck(); // Sprawdź od nowa po zwolnieniu myszy
   });
 
   window.addEventListener('resize', () => {
@@ -435,8 +375,7 @@
     // Reset stanu aplikacji
     backgroundColorChanged = false;
     winnerAnimation = false;
-    countdownActive = false;
-    pulseAnimationActive = false;
+    pulsingAnimation = false;
     winnerTouch = null;
     if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
     freezeTriggered = false;
