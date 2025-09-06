@@ -49,39 +49,77 @@
     return `rgb(${r}, ${g}, ${b})`;
   }
 
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function easeOutQuart(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function easeInOutQuart(t) {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+  }
+
   function drawCircles() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const currentTime = Date.now();
     
     if (winnerAnimation) {
-      // PŁYNNA ANIMACJA ZWYCIĘSKIEGO KÓŁKA (kontynuacja countdown)
+      // PŁYNNA ANIMACJA ZWYCIĘSKIEGO KÓŁKA Z PRZEDŁUŻONYM CZASEM
       const elapsedTime = currentTime - winnerAnimationStartTime;
-      const totalAnimDuration = 2500; // dłuższa, bardziej spektakularna animacja
+      const totalAnimDuration = 4000; // 4 sekundy na całą animację
       
       if (elapsedTime < totalAnimDuration) {
         const progress = elapsedTime / totalAnimDuration;
         
-        // Trzyfazowa animacja z płynnym przejściem
-        if (progress < 0.4) {
-          // Faza 1: Kontynuacja intensywnego pulsowania (400ms)
-          const phase1Progress = progress / 0.4;
-          const finalPulseFreq = 15;
-          const finalPulse = Math.sin(elapsedTime * finalPulseFreq * 0.01) * 0.4 + 1;
-          const phase1Growth = 1.6 + phase1Progress * 0.4; // od 160% do 200%
-          winnerAnimationRadius = winnerTouch.baseRadius * phase1Growth * finalPulse;
+        // Czterofazowa animacja z bardzo płynnymi przejściami
+        if (progress < 0.3) {
+          // Faza 1: Kontynuacja countdown pulsowania (1.2s)
+          const phase1Progress = progress / 0.3;
+          const smoothTransition = easeInOutCubic(phase1Progress);
+          
+          // Płynnie przechodzi z countdown do końcowego pulsowania
+          const countdownEndRadius = winnerTouch.baseRadius * 1.3; // końcowy rozmiar z countdown
+          const pulseFreq = 8 - phase1Progress * 3; // częstotliwość spada z 8 do 5
+          const pulseAmplitude = 0.15 - phase1Progress * 0.05; // amplituda spada z 0.15 do 0.1
+          const pulse = Math.sin(elapsedTime * pulseFreq * 0.01) * pulseAmplitude + 1;
+          
+          winnerAnimationRadius = countdownEndRadius * (1 + smoothTransition * 0.3) * pulse;
+          
+        } else if (progress < 0.5) {
+          // Faza 2: Stabilizacja i narastanie mocy (0.8s)
+          const phase2Progress = (progress - 0.3) / 0.2;
+          const smoothGrowth = easeInOutQuart(phase2Progress);
+          
+          // Stopniowo słabnące pulsowanie i wzrost rozmiaru
+          const baseSize = winnerTouch.baseRadius * 1.6;
+          const pulseFreq = 5 - phase2Progress * 2; // z 5 do 3
+          const pulseAmplitude = 0.1 * (1 - phase2Progress * 0.5); // z 0.1 do 0.05
+          const pulse = Math.sin(elapsedTime * pulseFreq * 0.01) * pulseAmplitude + 1;
+          
+          winnerAnimationRadius = baseSize * (1 + smoothGrowth * 0.5) * pulse;
+          
         } else if (progress < 0.7) {
-          // Faza 2: Stabilizacja i przygotowanie do eksplozji (300ms)
-          const phase2Progress = (progress - 0.4) / 0.3;
-          const smoothTransition = 1 - Math.pow(1 - phase2Progress, 3);
-          winnerAnimationRadius = winnerTouch.baseRadius * (2.0 + smoothTransition * 1.0); // od 200% do 300%
+          // Faza 3: Przygotowanie do eksplozji (0.8s)
+          const phase3Progress = (progress - 0.5) / 0.2;
+          const preparation = easeInOutCubic(phase3Progress);
+          
+          // Ostatnie delikatne pulsowanie przed eksplozją
+          const baseSize = winnerTouch.baseRadius * 2.1;
+          const finalPulse = Math.sin(elapsedTime * 2 * 0.01) * (0.05 * (1 - phase3Progress)) + 1;
+          
+          winnerAnimationRadius = baseSize * (1 + preparation * 0.4) * finalPulse;
+          
         } else {
-          // Faza 3: Eksplozja do pełnego ekranu (800ms)
-          const phase3Progress = (progress - 0.7) / 0.3;
-          const easeOutQuart = 1 - Math.pow(1 - phase3Progress, 4);
-          const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-          const startRadius = winnerTouch.baseRadius * 3.0;
-          winnerAnimationRadius = startRadius + easeOutQuart * (maxRadius - startRadius);
+          // Faza 4: Spektakularna eksplozja do pełnego ekranu (1.2s)
+          const phase4Progress = (progress - 0.7) / 0.3;
+          const explosion = easeOutQuart(phase4Progress);
+          
+          const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height) * 1.2;
+          const startRadius = winnerTouch.baseRadius * 2.5;
+          winnerAnimationRadius = startRadius + explosion * (maxRadius - startRadius);
         }
         
         // Rysowanie zwycięskiego kółka
@@ -90,20 +128,30 @@
         ctx.fillStyle = winnerTouch.color;
         ctx.fill();
         
-        // Rysowanie zanikających kółek z płynną kontynuacją
+        // Rysowanie zanikających kółek z bardzo płynną animacją
         for (const id in touches) {
           const touch = touches[id];
           if (touch !== winnerTouch) {
-            // Płynne zmniejszanie - zaczyna się od aktualnego rozmiaru
             let shrinkRadius;
-            if (progress < 0.4) {
-              // W pierwszej fazie utrzymaj rozmiar, potem zacznij zmniejszać
-              const shrinkStart = Math.max(0, (progress - 0.2) / 0.2);
-              shrinkRadius = touch.baseRadius * 1.6 * (1 - shrinkStart * 0.5);
+            
+            if (progress < 0.3) {
+              // W pierwszej fazie utrzymuj rozmiar z countdown
+              const countdownRadius = touch.baseRadius * 1.3;
+              const pulseFreq = 8 - (progress / 0.3) * 3;
+              const pulse = Math.sin(elapsedTime * pulseFreq * 0.01) * 0.1 + 1;
+              shrinkRadius = countdownRadius * pulse;
+              
+            } else if (progress < 0.5) {
+              // Druga faza: delikatne zmniejszanie
+              const phase2Progress = (progress - 0.3) / 0.2;
+              const shrinkFactor = 1 - easeInOutCubic(phase2Progress) * 0.3;
+              shrinkRadius = touch.baseRadius * 1.3 * shrinkFactor;
+              
             } else {
-              // Dalsze zmniejszanie
-              const shrinkProgress = (progress - 0.4) / 0.6;
-              shrinkRadius = touch.baseRadius * 0.8 * (1 - shrinkProgress);
+              // Trzecia i czwarta faza: dalsze zmniejszanie i zanikanie
+              const laterProgress = (progress - 0.5) / 0.5;
+              const shrinkFactor = 0.7 - easeOutQuart(laterProgress) * 0.7;
+              shrinkRadius = touch.baseRadius * 1.3 * shrinkFactor;
             }
             
             if (shrinkRadius > 0) {
@@ -152,33 +200,40 @@
           }
         }
         
-        // Aktualizacja promienia dla animacji wejścia i odliczania
+        // Aktualizacja promienia dla animacji wejścia
         const elapsedTime = currentTime - touch.createdAt;
-        const animDuration = 500; // czas trwania animacji w ms
+        const animDuration = 500;
         
         let currentRadius = touch.targetRadius;
         
         if (elapsedTime < animDuration) {
           // Animacja wejścia - płynne powiększanie
           const progress = elapsedTime / animDuration;
-          const easeOut = 1 - Math.pow(1 - progress, 3);
+          const easeOut = easeOutQuart(progress);
           currentRadius = touch.targetRadius * easeOut;
           animationInProgress = true;
         }
         
-        // ULEPSZONE INDYKATOR ODLICZANIA - powiększanie kółek podczas countdown
+        // ULEPSZONE ODLICZANIE Z DŁUŻSZYM CZASEM I MNIEJSZYM MAKSYMALNYM ROZMIAREM
         if (countdownStartTime && Object.keys(touches).length >= 2) {
           const countdownElapsed = currentTime - countdownStartTime;
-          const countdownDuration = 3000; // 3 sekundy countdown
+          const countdownDuration = 5000; // 5 sekund countdown (było 3)
           
           if (countdownElapsed < countdownDuration) {
             const countdownProgress = countdownElapsed / countdownDuration;
             
-            // Płynne przyspieszanie pulsowania i wzrostu
-            const intensityFactor = countdownProgress * countdownProgress; // kwadratowe przyspieszenie
-            const pulseFreq = 4 + countdownProgress * 8; // częstotliwość od 4 do 12
-            const pulse = Math.sin(countdownElapsed * pulseFreq * 0.01) * (0.2 + intensityFactor * 0.3) + 1;
-            const growthFactor = 1 + countdownProgress * 0.6; // rośnie do 160%
+            // Bardzo płynne przyspieszanie z easing functions
+            const intensityFactor = easeInOutCubic(countdownProgress);
+            
+            // Częstotliwość pulsowania rośnie płynnie od 2 do 8
+            const pulseFreq = 2 + intensityFactor * 6;
+            
+            // Amplituda pulsowania rośnie od 0.05 do 0.15 (zmniejszone z 0.3)
+            const pulseAmplitude = 0.05 + intensityFactor * 0.1;
+            const pulse = Math.sin(countdownElapsed * pulseFreq * 0.01) * pulseAmplitude + 1;
+            
+            // Wzrost rozmiaru do maksymalnie 130% (zmniejszone z 160%)
+            const growthFactor = 1 + intensityFactor * 0.3;
             
             currentRadius = touch.baseRadius * growthFactor * pulse;
             animationInProgress = true;
@@ -216,9 +271,19 @@
       const winnerIndex = Math.floor(Math.random() * touchArray.length);
       winnerTouch = touchArray[winnerIndex];
       
-      // Rozpocznij animację zwycięskiego kółka
+      // Rozpocznij animację zwycięskiego kółka z płynnym przejściem
       winnerAnimation = true;
       winnerAnimationStartTime = Date.now();
+      
+      // Ustaw początkowy rozmiar na aktualny rozmiar z countdown
+      const countdownElapsed = Date.now() - countdownStartTime;
+      const countdownProgress = Math.min(countdownElapsed / 5000, 1);
+      const intensityFactor = easeInOutCubic(countdownProgress);
+      const pulseAmplitude = 0.05 + intensityFactor * 0.1;
+      const pulse = Math.sin(countdownElapsed * (2 + intensityFactor * 6) * 0.01) * pulseAmplitude + 1;
+      const growthFactor = 1 + intensityFactor * 0.3;
+      winnerAnimationRadius = winnerTouch.baseRadius * growthFactor * pulse;
+      
       backgroundColorChanged = true;
       
       // Uruchom animację
@@ -230,13 +295,12 @@
     if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
     freezeTriggered = false;
     countdownStartTime = null;
-    lastTouchChangeTime = Date.now(); // Zapisz czas ostatniej zmiany
+    lastTouchChangeTime = Date.now();
 
     const touchCount = Object.keys(touches).length;
     if (touchCount >= 2) {
-      // NOWY SYSTEM: Czekaj minimum 2 sekundy od ostatniej zmiany przed rozpoczęciem countdown
+      // Czekaj minimum 2 sekundy od ostatniej zmiany przed rozpoczęciem countdown
       freezeCheckTimeout = setTimeout(() => {
-        // Sprawdź czy nadal mamy >=2 kółka i nie dodano nowych w międzyczasie
         if (Object.keys(touches).length >= 2 && !freezeTriggered) {
           const timeSinceLastChange = Date.now() - lastTouchChangeTime;
           if (timeSinceLastChange >= 2000) {
@@ -244,15 +308,14 @@
             countdownStartTime = Date.now();
             startAnimation();
             
-            // Ustaw timer na wybór zwycięzcy (3 sekundy countdown)
+            // Ustaw timer na wybór zwycięzcy (5 sekund countdown)
             setTimeout(() => {
               if (!freezeTriggered) {
                 freezeTriggered = true;
                 fillScreenWithRandomTouchColor();
               }
-            }, 3000);
+            }, 5000); // zwiększone z 3000 do 5000
           } else {
-            // Jeśli nie minęły 2 sekundy, czekaj dalej
             resetFreezeCheck();
           }
         }
@@ -261,7 +324,7 @@
   }
 
   function handleTouchStart(event) {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj nowe dotknięcia po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     event.preventDefault();
     for (let i = 0; i < event.changedTouches.length; i++) {
@@ -274,10 +337,10 @@
         vx: 0,
         vy: 0,
         color: getRandomColor(),
-        radius: 0, // Początkowy promień
-        targetRadius: 60, // Docelowy promień
-        baseRadius: 60, // Bazowy promień dla odliczania
-        createdAt: Date.now() // Czas utworzenia dla animacji
+        radius: 0,
+        targetRadius: 60,
+        baseRadius: 60,
+        createdAt: Date.now()
       };
     }
     startAnimation();
@@ -285,13 +348,12 @@
   }
 
   function handleTouchMove(event) {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     event.preventDefault();
     for (let i = 0; i < event.touches.length; i++) {
       const touch = event.touches[i];
       if (touches[touch.identifier]) {
-        // Ustaw docelową pozycję zamiast natychmiastowej zmiany
         touches[touch.identifier].targetX = touch.clientX;
         touches[touch.identifier].targetY = touch.clientY;
       }
@@ -300,7 +362,7 @@
   }
 
   function handleTouchEnd(event) {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj zakończenia dotknięć po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
@@ -319,7 +381,7 @@
   // Mysz (dla PC)
   let mouseDown = false;
   canvas.addEventListener('mousedown', (e) => {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj kliknięcia po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     mouseDown = true;
     touches['mouse'] = { 
@@ -330,20 +392,19 @@
       vx: 0,
       vy: 0,
       color: getRandomColor(),
-      radius: 0, // Początkowy promień
-      targetRadius: 30, // Docelowy promień
-      baseRadius: 30, // Bazowy promień dla odliczania
-      createdAt: Date.now() // Czas utworzenia dla animacji
+      radius: 0,
+      targetRadius: 30,
+      baseRadius: 30,
+      createdAt: Date.now()
     };
     startAnimation();
     resetFreezeCheck();
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj ruchy myszy po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     if (mouseDown) {
-      // Ustaw docelową pozycję zamiast natychmiastowej zmiany
       touches['mouse'].targetX = e.clientX;
       touches['mouse'].targetY = e.clientY;
       startAnimation();
@@ -351,7 +412,7 @@
   });
 
   canvas.addEventListener('mouseup', () => {
-    if (winnerAnimation || backgroundColorChanged) return; // Ignoruj zdarzenia po rozpoczęciu animacji zwycięzcy
+    if (winnerAnimation || backgroundColorChanged) return;
     
     mouseDown = false;
     delete touches['mouse'];
@@ -388,7 +449,6 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   `;
   resetButton.addEventListener('click', () => {
-    // Reset stanu aplikacji
     backgroundColorChanged = false;
     winnerAnimation = false;
     winnerTouch = null;
