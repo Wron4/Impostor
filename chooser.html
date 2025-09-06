@@ -350,7 +350,8 @@
     backgroundColorChanged = false;
     winnerAnimation = false;
     winnerTouch = null;
-    countdownStartTime = null; // Reset countdown
+    countdownStartTime = null;
+    lastTouchChangeTime = null;
     if (animationId) {
       cancelAnimationFrame(animationId);
       animationId = null;
