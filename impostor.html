@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -11,267 +12,300 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-            color: white;
-        }
+    body {
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        color: white;
+    }
 
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 800px;
-            width: 100%;
-        }
+    .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 800px;
+        width: 100%;
+    }
 
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
+    h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
 
-        .setup {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+    .setup {
+        text-align: center;
+        margin-bottom: 30px;
+    }
 
-        .player-input {
-            margin: 20px 0;
-        }
+    .player-input {
+        margin: 20px 0;
+    }
 
-        label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 1.2em;
-        }
+    label {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 1.2em;
+    }
 
-        input[type="number"] {
-            padding: 12px;
-            font-size: 1.1em;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            text-align: center;
-            width: 100px;
-        }
+    input[type="number"] {
+        padding: 12px;
+        font-size: 1.1em;
+        border: none;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        text-align: center;
+        width: 100px;
+    }
 
-        button {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
+    button {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.2em;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        }
+    button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
 
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
+    button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
 
-        .game-area {
-            display: none;
-        }
+    .game-area {
+        display: none;
+    }
 
-        .players-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
+    .players-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
 
-        .player-card {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
+    .player-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
 
-        .player-card:hover {
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-5px);
-        }
+    .player-card:hover {
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-5px);
+    }
 
-        .player-card.revealed {
-            background: rgba(255, 255, 255, 0.25);
-            border-color: #4ecdc4;
-        }
+    .player-card.revealed {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: #4ecdc4;
+    }
 
-        .player-name {
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
+    .player-name {
+        font-size: 1.3em;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
 
-        .player-word {
-            font-size: 1.8em;
-            font-weight: bold;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            margin-top: 10px;
-        }
+    .player-word {
+        font-size: 1.8em;
+        font-weight: bold;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        margin-top: 10px;
+    }
 
-        .impostor {
-            color: #ff6b6b;
-        }
+    .impostor {
+        color: #ff6b6b;
+    }
 
-        .normal {
-            color: #4ecdc4;
-        }
+    .normal {
+        color: #4ecdc4;
+    }
 
-        .hidden {
-            color: transparent;
-            background: rgba(255, 255, 255, 0.3);
-        }
+    .hidden {
+        color: transparent;
+        background: rgba(255, 255, 255, 0.3);
+    }
 
-        .reset-btn {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            margin-top: 30px;
-        }
+    .reset-btn {
+        background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        margin-top: 30px;
+    }
 
-        .game-info {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-        }
+    .game-info {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+    }
 
-        .click-instruction {
-            font-style: italic;
-            opacity: 0.8;
-            margin-top: 10px;
-        }
-    </style>
+    .click-instruction {
+        font-style: italic;
+        opacity: 0.8;
+        margin-top: 10px;
+    }
+
+    .card-status {
+        font-size: 0.9em;
+        opacity: 0.8;
+        margin-top: 5px;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    @keyframes fadeOut {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(0.95); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+</style>
+
 </head>
 <body>
     <div class="container">
         <h1>🕵️ Gra w Impostor</h1>
-        
-        <div class="setup" id="setup">
-            <div class="player-input">
-                <label for="playerCount">Liczba graczy (3-10):</label>
-                <input type="number" id="playerCount" min="3" max="10" value="5">
-            </div>
-            <button onclick="generateGame()">🎲 Wygeneruj Grę</button>
-        </div>
 
-        <div class="game-area" id="gameArea">
-            <div class="game-info">
-                <h2>Gra została wygenerowana!</h2>
-                <p>Każdy gracz powinien kliknąć na swoją kartę, aby zobaczyć swoje słowo.</p>
-                <p class="click-instruction">Impostor zobaczy "???" zamiast słowa</p>
-            </div>
-            
-            <div class="players-grid" id="playersGrid"></div>
-            
-            <div style="text-align: center;">
-                <button class="reset-btn" onclick="resetGame()">🔄 Nowa Gra</button>
-            </div>
+    <div class="setup" id="setup">
+        <div class="player-input">
+            <label for="playerCount">Liczba graczy (3-10):</label>
+            <input type="number" id="playerCount" min="3" max="10" value="5">
         </div>
+        <button onclick="generateGame()">🎲 Wygeneruj Grę</button>
     </div>
 
-    <script>
-        const words = [
-            'Pizza', 'Samochód', 'Telefon', 'Książka', 'Komputer', 'Krzesło', 'Drzewo', 'Słońce',
-            'Morze', 'Góra', 'Kot', 'Pies', 'Dom', 'Szkoła', 'Muzyka', 'Film', 'Gra', 'Sport',
-            'Jedzenie', 'Woda', 'Ogień', 'Powietrze', 'Ziemia', 'Miłość', 'Przyjaźń', 'Rodzina',
-            'Praca', 'Hobby', 'Podróż', 'Wakacje', 'Zima', 'Lato', 'Jesień', 'Wiosna', 'Deszcz',
-            'Śnieg', 'Wiatr', 'Chmura', 'Gwiazda', 'Księżyc', 'Planeta', 'Galaktyka', 'Wszechświat',
-            'Czas', 'Przestrzeń', 'Energia', 'Materia', 'Atom', 'Cząstka', 'Światło', 'Dźwięk',
-            'Kolor', 'Forma', 'Rozmiar', 'Waga', 'Temperatura', 'Ciśnienie', 'Prędkość', 'Siła'
-        ];
+    <div class="game-area" id="gameArea">
+        <div class="game-info">
+            <h2>Gra została wygenerowana!</h2>
+            <p>Każdy gracz powinien kliknąć na swoją kartę, aby zobaczyć swoje słowo.</p>
+            <p class="click-instruction">Kliknij ponownie, aby ukryć kartę. Impostor zobaczy "???" zamiast słowa</p>
+        </div>
+        
+        <div class="players-grid" id="playersGrid"></div>
+        
+        <div style="text-align: center;">
+            <button class="reset-btn" onclick="resetGame()">🔄 Nowa Gra</button>
+        </div>
+    </div>
+</div>
 
-        let currentGame = null;
+<script>
+    const words = [
+        'Pizza', 'Samochód', 'Telefon', 'Książka', 'Komputer', 'Krzesło', 'Drzewo', 'Słońce',
+        'Morze', 'Góra', 'Kot', 'Pies', 'Dom', 'Szkoła', 'Muzyka', 'Film', 'Gra', 'Sport',
+        'Jedzenie', 'Woda', 'Ogień', 'Powietrze', 'Ziemia', 'Miłość', 'Przyjaźń', 'Rodzina',
+        'Praca', 'Hobby', 'Podróż', 'Wakacje', 'Zima', 'Lato', 'Jesień', 'Wiosna', 'Deszcz',
+        'Śnieg', 'Wiatr', 'Chmura', 'Gwiazda', 'Księżyc', 'Planeta', 'Galaktyka', 'Wszechświat',
+        'Czas', 'Przestrzeń', 'Energia', 'Materia', 'Atom', 'Cząstka', 'Światło', 'Dźwięk',
+        'Kolor', 'Forma', 'Rozmiar', 'Waga', 'Temperatura', 'Ciśnienie', 'Prędkość', 'Siła'
+    ];
 
-        function generateGame() {
-            const playerCount = parseInt(document.getElementById('playerCount').value);
-            
-            if (playerCount < 3 || playerCount > 10) {
-                alert('Liczba graczy musi być między 3 a 10!');
-                return;
-            }
+    let currentGame = null;
 
-            // Wybierz losowe słowo
-            const word = words[Math.floor(Math.random() * words.length)];
-            
-            // Wybierz losowego impostora
-            const impostorIndex = Math.floor(Math.random() * playerCount);
-            
-            currentGame = {
-                playerCount: playerCount,
-                word: word,
-                impostorIndex: impostorIndex,
-                revealedPlayers: new Set()
-            };
-
-            // Ukryj setup i pokaż grę
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('gameArea').style.display = 'block';
-
-            // Wygeneruj karty graczy
-            generatePlayerCards();
+    function generateGame() {
+        const playerCount = parseInt(document.getElementById('playerCount').value);
+        
+        if (playerCount < 3 || playerCount > 10) {
+            alert('Liczba graczy musi być między 3 a 10!');
+            return;
         }
 
-        function generatePlayerCards() {
-            const grid = document.getElementById('playersGrid');
-            grid.innerHTML = '';
+        // Wybierz losowe słowo
+        const word = words[Math.floor(Math.random() * words.length)];
+        
+        // Wybierz losowego impostora
+        const impostorIndex = Math.floor(Math.random() * playerCount);
+        
+        currentGame = {
+            playerCount: playerCount,
+            word: word,
+            impostorIndex: impostorIndex,
+            revealedPlayers: new Set()
+        };
 
-            for (let i = 0; i < currentGame.playerCount; i++) {
-                const card = document.createElement('div');
-                card.className = 'player-card';
-                card.onclick = () => revealPlayer(i);
-                
-                const isImpostor = i === currentGame.impostorIndex;
-                
-                card.innerHTML = `
-                    <div class="player-name">Gracz ${i + 1}</div>
-                    <div class="player-word hidden" id="word-${i}">
-                        ${isImpostor ? '???' : currentGame.word}
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            }
-        }
+        // Ukryj setup i pokaż grę
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('gameArea').style.display = 'block';
 
-        function revealPlayer(playerIndex) {
-            if (currentGame.revealedPlayers.has(playerIndex)) {
-                return; // Już odkryte
-            }
+        // Wygeneruj karty graczy
+        generatePlayerCards();
+    }
 
-            const card = document.querySelector(`.player-card:nth-child(${playerIndex + 1})`);
-            const wordElement = document.getElementById(`word-${playerIndex}`);
+    function generatePlayerCards() {
+        const grid = document.getElementById('playersGrid');
+        grid.innerHTML = '';
+
+        for (let i = 0; i < currentGame.playerCount; i++) {
+            const card = document.createElement('div');
+            card.className = 'player-card';
+            card.onclick = () => togglePlayerCard(i);
             
+            const isImpostor = i === currentGame.impostorIndex;
+            
+            card.innerHTML = `
+                <div class="player-name">Gracz ${i + 1}</div>
+                <div class="player-word hidden" id="word-${i}">
+                    ${isImpostor ? '???' : currentGame.word}
+                </div>
+                <div class="card-status" id="status-${i}">Kliknij, aby odkryć</div>
+            `;
+            
+            grid.appendChild(card);
+        }
+    }
+
+    function togglePlayerCard(playerIndex) {
+        const card = document.querySelector(`.player-card:nth-child(${playerIndex + 1})`);
+        const wordElement = document.getElementById(`word-${playerIndex}`);
+        const statusElement = document.getElementById(`status-${playerIndex}`);
+        
+        if (currentGame.revealedPlayers.has(playerIndex)) {
+            // Ukryj kartę
+            card.classList.remove('revealed');
+            wordElement.classList.add('hidden');
+            wordElement.classList.remove('impostor', 'normal');
+            statusElement.textContent = 'Kliknij, aby odkryć';
+            currentGame.revealedPlayers.delete(playerIndex);
+            
+            // Animacja ukrywania
+            card.style.animation = 'fadeOut 0.5s ease-in-out';
+            setTimeout(() => {
+                card.style.animation = '';
+            }, 500);
+        } else {
+            // Odkryj kartę
             card.classList.add('revealed');
             wordElement.classList.remove('hidden');
+            statusElement.textContent = 'Kliknij, aby ukryć';
             
             if (playerIndex === currentGame.impostorIndex) {
                 wordElement.classList.add('impostor');
@@ -280,35 +314,21 @@
             }
             
             currentGame.revealedPlayers.add(playerIndex);
-
-            // Dodaj efekt dźwiękowy wizualny
+            
+            // Animacja odkrywania
             card.style.animation = 'pulse 0.5s ease-in-out';
             setTimeout(() => {
                 card.style.animation = '';
             }, 500);
         }
+    }
 
-        function resetGame() {
-            document.getElementById('setup').style.display = 'block';
-            document.getElementById('gameArea').style.display = 'none';
-            currentGame = null;
-        }
+    function resetGame() {
+        document.getElementById('setup').style.display = 'block';
+        document.getElementById('gameArea').style.display = 'none';
+        currentGame = null;
+    }
+</script>
 
-        // Dodaj animację CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-                100% { transform: scale(1); }
-            }
-            @keyframes fadeOut {
-                0% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(0.95); opacity: 0.7; }
-                100% { transform: scale(1); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
 </body>
 </html>
