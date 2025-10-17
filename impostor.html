@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
@@ -200,6 +199,12 @@
             <label for="playerCount">Liczba graczy (3-10):</label>
             <input type="number" id="playerCount" min="3" max="10" value="5">
         </div>
+        <div class="player-input">
+            <label>
+                <input type="checkbox" id="hintEnabled" checked style="width: auto; margin-right: 10px;">
+                Pomoc dla impostora (podpowiedź dla pierwszych 40%)
+            </label>
+        </div>
         <button onclick="generateGame()">🎲 Wygeneruj Grę</button>
     </div>
 
@@ -207,7 +212,8 @@
         <div class="game-info">
             <h2>Gra została wygenerowana!</h2>
             <p>Każdy gracz powinien kliknąć na swoją kartę, aby zobaczyć swoje słowo.</p>
-            <p class="click-instruction">Kliknij ponownie, aby ukryć kartę. Impostor zobaczy "???" zamiast słowa</p>
+            <p class="click-instruction">Kliknij ponownie, aby ukryć kartę. Impostor bez podpowiedzi zobaczy "???"</p>
+            <p class="click-instruction">Impostor z podpowiedzią (pierwsze 40%) dostaje słowo-wskazówkę!</p>
         </div>
         
         <div class="players-grid" id="playersGrid"></div>
@@ -220,19 +226,72 @@
 
 <script>
     const words = [
-        'Pizza', 'Samochód', 'Telefon', 'Książka', 'Komputer', 'Krzesło', 'Drzewo', 'Słońce',
-        'Morze', 'Góra', 'Kot', 'Pies', 'Dom', 'Szkoła', 'Muzyka', 'Film', 'Gra', 'Sport',
-        'Jedzenie', 'Woda', 'Ogień', 'Powietrze', 'Ziemia', 'Miłość', 'Przyjaźń', 'Rodzina',
-        'Praca', 'Hobby', 'Podróż', 'Wakacje', 'Zima', 'Lato', 'Jesień', 'Wiosna', 'Deszcz',
-        'Śnieg', 'Wiatr', 'Chmura', 'Gwiazda', 'Księżyc', 'Planeta', 'Galaktyka', 'Wszechświat',
-        'Czas', 'Przestrzeń', 'Energia', 'Materia', 'Atom', 'Cząstka', 'Światło', 'Dźwięk',
-        'Kolor', 'Forma', 'Rozmiar', 'Waga', 'Temperatura', 'Ciśnienie', 'Prędkość', 'Siła'
+        { word: 'Pizza', hints: ['Jedzenie', 'Włochy', 'Ser', 'Okrągłe'] },
+        { word: 'Samochód', hints: ['Pojazd', 'Transport', 'Silnik', 'Droga'] },
+        { word: 'Telefon', hints: ['Elektronika', 'Komunikacja', 'Ekran', 'Dzwonek'] },
+        { word: 'Książka', hints: ['Papier', 'Czytanie', 'Strony', 'Biblioteka'] },
+        { word: 'Komputer', hints: ['Technologia', 'Elektronika', 'Klawiatura', 'Internet'] },
+        { word: 'Krzesło', hints: ['Mebel', 'Siedzenie', 'Nogi', 'Dom'] },
+        { word: 'Drzewo', hints: ['Natura', 'Roślina', 'Liście', 'Las'] },
+        { word: 'Słońce', hints: ['Niebo', 'Światło', 'Ciepło', 'Gwiazda'] },
+        { word: 'Morze', hints: ['Woda', 'Fale', 'Plaża', 'Sól'] },
+        { word: 'Góra', hints: ['Teren', 'Wysokość', 'Szczyt', 'Wspinaczka'] },
+        { word: 'Kot', hints: ['Zwierzę', 'Futro', 'Miauczenie', 'Pazury'] },
+        { word: 'Pies', hints: ['Zwierzę', 'Szczekanie', 'Przyjaciel', 'Obroża'] },
+        { word: 'Dom', hints: ['Budynek', 'Mieszkanie', 'Dach', 'Rodzina'] },
+        { word: 'Szkoła', hints: ['Miejsce', 'Nauka', 'Lekcje', 'Uczniowie'] },
+        { word: 'Muzyka', hints: ['Sztuka', 'Dźwięk', 'Melodia', 'Rytm'] },
+        { word: 'Film', hints: ['Rozrywka', 'Kino', 'Ekran', 'Aktorzy'] },
+        { word: 'Gra', hints: ['Zabawa', 'Rozrywka', 'Zasady', 'Rywalizacja'] },
+        { word: 'Sport', hints: ['Aktywność', 'Ruch', 'Trening', 'Drużyna'] },
+        { word: 'Jedzenie', hints: ['Żywność', 'Posiłek', 'Smak', 'Kuchnia'] },
+        { word: 'Woda', hints: ['Płyn', 'Picie', 'H2O', 'Bezbarwna'] },
+        { word: 'Ogień', hints: ['Żywioł', 'Ciepło', 'Płomień', 'Czerwony'] },
+        { word: 'Powietrze', hints: ['Gaz', 'Oddychanie', 'Atmosfera', 'Wiatr'] },
+        { word: 'Ziemia', hints: ['Planeta', 'Grunt', 'Glob', 'Błękitna'] },
+        { word: 'Miłość', hints: ['Uczucie', 'Serce', 'Romans', 'Emocja'] },
+        { word: 'Przyjaźń', hints: ['Relacja', 'Więź', 'Zaufanie', 'Towarzystwo'] },
+        { word: 'Rodzina', hints: ['Ludzie', 'Krewni', 'Więź', 'Dom'] },
+        { word: 'Praca', hints: ['Zajęcie', 'Etat', 'Biuro', 'Zarobek'] },
+        { word: 'Hobby', hints: ['Pasja', 'Zainteresowanie', 'Wolny czas', 'Przyjemność'] },
+        { word: 'Podróż', hints: ['Ruch', 'Wycieczka', 'Miejsce', 'Walizka'] },
+        { word: 'Wakacje', hints: ['Odpoczynek', 'Lato', 'Plaża', 'Urlop'] },
+        { word: 'Zima', hints: ['Pora roku', 'Śnieg', 'Mróz', 'Grudzień'] },
+        { word: 'Lato', hints: ['Pora roku', 'Upał', 'Słońce', 'Lipiec'] },
+        { word: 'Jesień', hints: ['Pora roku', 'Liście', 'Wrzesień', 'Deszcz'] },
+        { word: 'Wiosna', hints: ['Pora roku', 'Kwiaty', 'Marzec', 'Ocieplenie'] },
+        { word: 'Deszcz', hints: ['Pogoda', 'Krople', 'Parasol', 'Chmury'] },
+        { word: 'Śnieg', hints: ['Opady', 'Biały', 'Zima', 'Płatki'] },
+        { word: 'Wiatr', hints: ['Powietrze', 'Podmuch', 'Ruch', 'Wiejący'] },
+        { word: 'Chmura', hints: ['Niebo', 'Biała', 'Deszcz', 'Puszysty'] },
+        { word: 'Gwiazda', hints: ['Kosmos', 'Światło', 'Noc', 'Niebo'] },
+        { word: 'Księżyc', hints: ['Satelita', 'Noc', 'Fazy', 'Srebrzysty'] },
+        { word: 'Planeta', hints: ['Ciało niebieskie', 'Orbita', 'Kosmos', 'Okrągła'] },
+        { word: 'Galaktyka', hints: ['Przestrzeń', 'Gwiazdy', 'Kosmos', 'Droga Mleczna'] },
+        { word: 'Wszechświat', hints: ['Wszystko', 'Nieskończoność', 'Kosmos', 'Big Bang'] },
+        { word: 'Czas', hints: ['Wymiar', 'Zegar', 'Godziny', 'Upływ'] },
+        { word: 'Przestrzeń', hints: ['Miejsce', 'Obszar', 'Wymiar', 'Pusty'] },
+        { word: 'Energia', hints: ['Siła', 'Moc', 'Prąd', 'Ruch'] },
+        { word: 'Materia', hints: ['Substancja', 'Fizyka', 'Masa', 'Ciało'] },
+        { word: 'Atom', hints: ['Cząstka', 'Mały', 'Jądro', 'Fizyka'] },
+        { word: 'Cząstka', hints: ['Element', 'Mała', 'Część', 'Atom'] },
+        { word: 'Światło', hints: ['Promieniowanie', 'Jasność', 'Lampa', 'Widzenie'] },
+        { word: 'Dźwięk', hints: ['Fala', 'Słyszenie', 'Głos', 'Echo'] },
+        { word: 'Kolor', hints: ['Barwa', 'Widmo', 'Odcień', 'Tęcza'] },
+        { word: 'Forma', hints: ['Kształt', 'Postać', 'Układ', 'Struktura'] },
+        { word: 'Rozmiar', hints: ['Wielkość', 'Wymiar', 'Skala', 'Duży/Mały'] },
+        { word: 'Waga', hints: ['Masa', 'Ciężar', 'Kilogramy', 'Ważenie'] },
+        { word: 'Temperatura', hints: ['Ciepło', 'Stopnie', 'Gorąco/Zimno', 'Termometr'] },
+        { word: 'Ciśnienie', hints: ['Siła', 'Atmosfera', 'Nacisk', 'Barometr'] },
+        { word: 'Prędkość', hints: ['Tempo', 'Szybkość', 'Kilometr', 'Ruch'] },
+        { word: 'Siła', hints: ['Moc', 'Energia', 'Nacisk', 'Fizyka'] }
     ];
 
     let currentGame = null;
 
     function generateGame() {
         const playerCount = parseInt(document.getElementById('playerCount').value);
+        const hintEnabled = document.getElementById('hintEnabled').checked;
         
         if (playerCount < 3 || playerCount > 10) {
             alert('Liczba graczy musi być między 3 a 10!');
@@ -240,15 +299,25 @@
         }
 
         // Wybierz losowe słowo
-        const word = words[Math.floor(Math.random() * words.length)];
+        const wordObj = words[Math.floor(Math.random() * words.length)];
         
         // Wybierz losowego impostora
         const impostorIndex = Math.floor(Math.random() * playerCount);
         
+        // Sprawdź czy impostor jest w pierwszych 40%
+        const firstFortyPercent = Math.ceil(playerCount * 0.4);
+        const impostorGetsHint = hintEnabled && (impostorIndex < firstFortyPercent);
+        
+        // Wybierz losową podpowiedź z tablicy podpowiedzi
+        const randomHint = wordObj.hints[Math.floor(Math.random() * wordObj.hints.length)];
+
         currentGame = {
             playerCount: playerCount,
-            word: word,
+            word: wordObj.word,
+            // ✨ ✨ ✨ POPRAWKA TUTAJ ✨ ✨ ✨
+            hint: randomHint, // Używamy wylosowanej podpowiedzi
             impostorIndex: impostorIndex,
+            impostorGetsHint: impostorGetsHint,
             revealedPlayers: new Set()
         };
 
@@ -270,11 +339,16 @@
             card.onclick = () => togglePlayerCard(i);
             
             const isImpostor = i === currentGame.impostorIndex;
+            let displayText = currentGame.word;
+            
+            if (isImpostor) {
+                displayText = currentGame.impostorGetsHint ? currentGame.hint : '???';
+            }
             
             card.innerHTML = `
                 <div class="player-name">Gracz ${i + 1}</div>
                 <div class="player-word hidden" id="word-${i}">
-                    ${isImpostor ? '???' : currentGame.word}
+                    ${displayText}
                 </div>
                 <div class="card-status" id="status-${i}">Kliknij, aby odkryć</div>
             `;
