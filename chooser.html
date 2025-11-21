@@ -3,29 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Dotykowe kółka</title>
+  <title>Płynne Kółka (Gooey Effect)</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       touch-action: none;
+      /* Ciemne tło sprawia, że mieszanie kolorów wygląda jak światło */
+      background-color: #1a1a1a; 
+      transition: background-color 1s ease;
     }
+    
     canvas {
       display: block;
+      /* To jest klucz do efektu "klejenia się" kółek */
+      filter: url('#goo');
+      -webkit-filter: url('#goo');
+    }
+
+    /* Ukrywamy SVG z definicją filtra, musi być w DOM, ale niewidoczne */
+    .svg-filter {
+      position: absolute;
+      width: 0;
+      height: 0;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
+
+<svg class="svg-filter">
+  <defs>
+    <filter id="goo">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+      <feColorMatrix in="blur" mode="matrix" values="
+        1 0 0 0 0  
+        0 1 0 0 0  
+        0 0 1 0 0  
+        0 0 0 19 -9" result="goo" />
+      <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+    </filter>
+  </defs>
+</svg>
+
 <canvas id="canvas"></canvas>
 
 <script>
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  
+  // Funkcja resize
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
 
-  const touches = {}; // { id: { x, y, targetX, targetY, vx, vy, color, radius, targetRadius, createdAt } }
+  const touches = {}; 
 
   let freezeCheckTimeout = null;
   let freezeTriggered = false;
@@ -38,52 +74,57 @@
   let winnerAnimationRadius = 0;
   let animationId = null;
 
-  // Parametry fizyki sprężynowej
   const springStrength = 0.08;
   const damping = 0.85;
 
   function getRandomColor() {
-    const r = Math.floor(Math.random() * 200) + 30;
-    const g = Math.floor(Math.random() * 200) + 30;
-    const b = Math.floor(Math.random() * 200) + 30;
+    // Jaśniejsze kolory dla lepszego efektu mieszania na ciemnym tle
+    const r = Math.floor(Math.random() * 155) + 100;
+    const g = Math.floor(Math.random() * 155) + 100;
+    const b = Math.floor(Math.random() * 155) + 100;
     return `rgb(${r}, ${g}, ${b})`;
   }
 
   function drawCircles() {
+    // Czyścimy canvas w standardowym trybie
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const currentTime = Date.now();
     
+    // WAŻNE: Zmieniamy tryb mieszania na 'screen' lub 'lighter'
+    // To sprawia, że kolory się miksują (dodają do siebie)
+    if (!backgroundColorChanged) {
+      ctx.globalCompositeOperation = 'screen';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    
     if (winnerAnimation) {
-      // Animacja zwycięskiego kółka
       const elapsedTime = currentTime - winnerAnimationStartTime;
-      const animDuration = 2000; // czas trwania animacji rozszerzania w ms
+      const animDuration = 2000;
       
       if (elapsedTime < animDuration) {
-        // Obliczanie rozmiaru rozszerzającego się kółka
         const progress = elapsedTime / animDuration;
         const easeInOut = progress < 0.5 
           ? 2 * progress * progress 
           : 1 - Math.pow(-2 * progress + 2, 2) / 2;
         
-        // Maksymalny promień to przekątna ekranu
         const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
         winnerAnimationRadius = winnerTouch.radius + easeInOut * (maxRadius - winnerTouch.radius);
         
-        // Rysowanie zwycięskiego kółka
+        // Rysowanie zwycięzcy
         ctx.beginPath();
         ctx.arc(winnerTouch.x, winnerTouch.y, winnerAnimationRadius, 0, Math.PI * 2);
         ctx.fillStyle = winnerTouch.color;
         ctx.fill();
         
-        // Rysowanie pozostałych kółek, które się zmniejszają
+        // Rysowanie reszty (zanikanie)
         for (const id in touches) {
           const touch = touches[id];
           if (touch !== winnerTouch) {
-            // Zmniejszanie innych kółek - odwrotne easeInOut dla efektu zanikania
             const shrinkRadius = touch.radius * (1 - easeInOut);
-            
-            if (shrinkRadius > 0.5) { // Rysuj tylko jeśli promień jest większy niż 0.5
+            if (shrinkRadius > 0.5) {
               ctx.beginPath();
               ctx.arc(touch.x, touch.y, shrinkRadius, 0, Math.PI * 2);
               ctx.fillStyle = touch.color;
@@ -94,115 +135,87 @@
         
         animationId = requestAnimationFrame(drawCircles);
       } else {
-        // Po zakończeniu animacji ustaw tło na kolor zwycięskiego kółka
         document.body.style.backgroundColor = winnerTouch.color;
-        // Zakończ animację
+        // Usuwamy filtr na koniec, żeby tło było jednolite
+        canvas.style.filter = 'none'; 
         winnerAnimation = false;
         animationId = null;
       }
     } else if (pulsingAnimation) {
-      // Animacja pulsowania przed wyborem zwycięzcy
       const elapsedTime = currentTime - pulsingStartTime;
-      const pulseDuration = 3000; // 3 sekundy pulsowania
+      const pulseDuration = 3000;
       
       if (elapsedTime < pulseDuration) {
-        // Oblicz pulsowanie - 3 pulsy w ciągu 3 sekund (co sekundę)
-        const pulseProgress = (elapsedTime % 1000) / 1000; // cykl co sekundę
-        const pulseIntensity = Math.sin(pulseProgress * Math.PI); // płynne pulsowanie 0->1->0
-        const pulseScale = 1 + pulseIntensity * 0.3; // pulsowanie od 1.0 do 1.3
+        const pulseProgress = (elapsedTime % 1000) / 1000;
+        const pulseIntensity = Math.sin(pulseProgress * Math.PI);
+        const pulseScale = 1 + pulseIntensity * 0.3;
         
-        // Rysuj wszystkie kółka z pulsowaniem
         for (const id in touches) {
           const touch = touches[id];
           
-          // Fizyka sprężynowa dla pozycji (nadal aktywna podczas pulsowania)
-          if (touch.targetX !== undefined && touch.targetY !== undefined) {
+          if (touch.targetX !== undefined) {
             const dx = touch.targetX - touch.x;
             const dy = touch.targetY - touch.y;
-            
             touch.vx = (touch.vx || 0) + dx * springStrength;
             touch.vy = (touch.vy || 0) + dy * springStrength;
-            
             touch.vx *= damping;
             touch.vy *= damping;
-            
             touch.x += touch.vx;
             touch.y += touch.vy;
           }
           
-          // Rysowanie kółka z pulsowaniem
           const pulsedRadius = touch.targetRadius * pulseScale;
           ctx.beginPath();
           ctx.arc(touch.x, touch.y, pulsedRadius, 0, Math.PI * 2);
           ctx.fillStyle = touch.color;
           ctx.fill();
           
-          // WAŻNE: Zachowaj aktualny promień dla płynnego przejścia
           touch.radius = pulsedRadius;
         }
         
         animationId = requestAnimationFrame(drawCircles);
       } else {
-        // Koniec pulsowania - wybierz zwycięzcę i rozpocznij animację wygrania
         const touchArray = Object.values(touches);
         if (touchArray.length >= 2) {
           const winnerIndex = Math.floor(Math.random() * touchArray.length);
           winnerTouch = touchArray[winnerIndex];
-          
-          // WAŻNE: Zachowaj ostatni rozmiar z pulsowania jako punkt startowy
-          // nie zmieniamy winnerTouch.radius - zostanie taki jaki był na końcu pulsowania
-          
-          // Płynne przejście do animacji zwycięzcy
           pulsingAnimation = false;
           winnerAnimation = true;
           winnerAnimationStartTime = currentTime;
           backgroundColorChanged = true;
-          
-          // Kontynuuj animację natychmiast - bez przerwy
           drawCircles();
           return;
         } else {
-          // Jeśli nie ma wystarczającej liczby kółek, zakończ pulsowanie
           pulsingAnimation = false;
           animationId = null;
         }
       }
     } else {
-      // Normalne rysowanie kółek z fizyką sprężynową
+      // Normalne rysowanie
       let animationInProgress = false;
       
       for (const id in touches) {
         const touch = touches[id];
         
-        // Fizyka sprężynowa dla pozycji
-        if (touch.targetX !== undefined && touch.targetY !== undefined) {
+        if (touch.targetX !== undefined) {
           const dx = touch.targetX - touch.x;
           const dy = touch.targetY - touch.y;
-          
-          // Siła sprężynowa
           touch.vx = (touch.vx || 0) + dx * springStrength;
           touch.vy = (touch.vy || 0) + dy * springStrength;
-          
-          // Tłumienie
           touch.vx *= damping;
           touch.vy *= damping;
-          
-          // Aktualizacja pozycji
           touch.x += touch.vx;
           touch.y += touch.vy;
           
-          // Sprawdź czy animacja się toczy
-          if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1 || Math.abs(touch.vx) > 0.1 || Math.abs(touch.vy) > 0.1) {
+          if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1 || Math.abs(touch.vx) > 0.1) {
             animationInProgress = true;
           }
         }
         
-        // Aktualizacja promienia dla animacji wejścia
         const elapsedTime = currentTime - touch.createdAt;
-        const animDuration = 500; // czas trwania animacji w ms
+        const animDuration = 500;
         
         if (elapsedTime < animDuration) {
-          // Animacja wejścia - płynne powiększanie
           const progress = elapsedTime / animDuration;
           const easeOut = 1 - Math.pow(1 - progress, 3);
           touch.radius = touch.targetRadius * easeOut;
@@ -211,14 +224,12 @@
           touch.radius = touch.targetRadius;
         }
         
-        // Rysowanie koła
         ctx.beginPath();
         ctx.arc(touch.x, touch.y, touch.radius, 0, Math.PI * 2);
         ctx.fillStyle = touch.color;
         ctx.fill();
       }
       
-      // Wywołaj ponownie rysowanie, jeśli jakakolwiek animacja jest w trakcie
       if (animationInProgress) {
         animationId = requestAnimationFrame(drawCircles);
       } else {
@@ -245,7 +256,11 @@
   function resetFreezeCheck() {
     if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
     freezeTriggered = false;
-    pulsingAnimation = false; // Zatrzymaj pulsowanie jeśli ktoś zmieni dotknięcia
+    
+    // Jeśli ktoś ruszy palcem podczas pulsowania, przerywamy (opcjonalne)
+    if(pulsingAnimation && Object.keys(touches).length < 2) {
+        pulsingAnimation = false;
+    }
 
     if (Object.keys(touches).length >= 2) {
       freezeCheckTimeout = setTimeout(() => {
@@ -253,26 +268,22 @@
           freezeTriggered = true;
           startPulsingAnimation();
         }
-      }, 3000);
+      }, 2000); // Zmniejszyłem czas oczekiwania na 2s dla lepszego UX
     }
   }
 
   function handleTouchStart(event) {
     if (winnerAnimation || backgroundColorChanged || pulsingAnimation) return;
-    
     event.preventDefault();
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
       touches[touch.identifier] = {
-        x: touch.clientX,
-        y: touch.clientY,
-        targetX: touch.clientX,
-        targetY: touch.clientY,
-        vx: 0,
-        vy: 0,
+        x: touch.clientX, y: touch.clientY,
+        targetX: touch.clientX, targetY: touch.clientY,
+        vx: 0, vy: 0,
         color: getRandomColor(),
         radius: 0,
-        targetRadius: 60,
+        targetRadius: 65, // Nieco większe kółka bo filtr je trochę "zjada"
         createdAt: Date.now()
       };
     }
@@ -282,7 +293,6 @@
 
   function handleTouchMove(event) {
     if (winnerAnimation || backgroundColorChanged) return;
-    
     event.preventDefault();
     for (let i = 0; i < event.touches.length; i++) {
       const touch = event.touches[i];
@@ -296,37 +306,28 @@
 
   function handleTouchEnd(event) {
     if (winnerAnimation || backgroundColorChanged) return;
-    
     for (let i = 0; i < event.changedTouches.length; i++) {
-      const touch = event.changedTouches[i];
-      delete touches[touch.identifier];
+      delete touches[event.changedTouches[i].identifier];
     }
     startAnimation();
-    resetFreezeCheck(); // Sprawdź od nowa po usunięciu palca
+    resetFreezeCheck();
   }
 
-  // Dotyk
-  canvas.addEventListener('touchstart', handleTouchStart, false);
-  canvas.addEventListener('touchmove', handleTouchMove, false);
+  canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+  canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
   canvas.addEventListener('touchend', handleTouchEnd, false);
   canvas.addEventListener('touchcancel', handleTouchEnd, false);
 
-  // Mysz (dla PC)
   let mouseDown = false;
   canvas.addEventListener('mousedown', (e) => {
     if (winnerAnimation || backgroundColorChanged || pulsingAnimation) return;
-    
     mouseDown = true;
     touches['mouse'] = { 
-      x: e.clientX, 
-      y: e.clientY,
-      targetX: e.clientX,
-      targetY: e.clientY,
-      vx: 0,
-      vy: 0,
+      x: e.clientX, y: e.clientY,
+      targetX: e.clientX, targetY: e.clientY,
+      vx: 0, vy: 0,
       color: getRandomColor(),
-      radius: 0,
-      targetRadius: 30,
+      radius: 0, targetRadius: 40,
       createdAt: Date.now()
     };
     startAnimation();
@@ -335,7 +336,6 @@
 
   canvas.addEventListener('mousemove', (e) => {
     if (winnerAnimation || backgroundColorChanged) return;
-    
     if (mouseDown) {
       touches['mouse'].targetX = e.clientX;
       touches['mouse'].targetY = e.clientY;
@@ -345,78 +345,59 @@
 
   canvas.addEventListener('mouseup', () => {
     if (winnerAnimation || backgroundColorChanged) return;
-    
     mouseDown = false;
     delete touches['mouse'];
     startAnimation();
-    resetFreezeCheck(); // Sprawdź od nowa po zwolnieniu myszy
+    resetFreezeCheck();
   });
+  
+  window.addEventListener('contextmenu', e => e.preventDefault());
 
-  window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    startAnimation();
-  });
-
-  // Dodanie przycisków
+  // Przyciski
   const buttonContainer = document.createElement('div');
   buttonContainer.style.cssText = `
-    position: fixed;
-    bottom: 15px;
-    right: 15px;
-    z-index: 10;
-    display: flex;
-    gap: 10px;
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    display: flex; gap: 15px;
+  `;
+  
+  // Styl przycisków (szklany efekt żeby pasował do klimatu)
+  const btnStyle = `
+    width: 44px; height: 44px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    transition: transform 0.2s;
   `;
 
-  const resetButton = document.createElement('button');
+  const resetButton = document.createElement('div');
   resetButton.innerText = '🔄';
-  resetButton.style.cssText = `
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.9);
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  `;
-  resetButton.addEventListener('click', () => {
-    // Reset stanu aplikacji
+  resetButton.style.cssText = btnStyle;
+  resetButton.onclick = () => {
     backgroundColorChanged = false;
     winnerAnimation = false;
     pulsingAnimation = false;
     winnerTouch = null;
     if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
     freezeTriggered = false;
-    if (animationId) {
-      cancelAnimationFrame(animationId);
-      animationId = null;
-    }
-    for (const id in touches) {
-      delete touches[id];
-    }
-    document.body.style.backgroundColor = '';
+    for (const id in touches) delete touches[id];
+    document.body.style.backgroundColor = '#1a1a1a';
+    canvas.style.filter = "url('#goo')"; // Przywróć filtr
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-  });
+  };
 
-  const homeButton = document.createElement('button');
+  const homeButton = document.createElement('div');
   homeButton.innerText = '🏠';
-  homeButton.style.cssText = `
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.9);
-    border: none;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  `;
-  homeButton.addEventListener('click', () => {
-    window.location.href = 'index.html';
-  });
+  homeButton.style.cssText = btnStyle;
+  homeButton.onclick = () => { window.location.href = 'index.html'; };
 
   buttonContainer.appendChild(resetButton);
   buttonContainer.appendChild(homeButton);
   document.body.appendChild(buttonContainer);
+
 </script>
 </body>
 </html>
