@@ -1,403 +1,1015 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Płynne Kółka (Gooey Effect)</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      touch-action: none;
-      /* Ciemne tło sprawia, że mieszanie kolorów wygląda jak światło */
-      background-color: #1a1a1a; 
-      transition: background-color 1s ease;
-    }
-    
-    canvas {
-      display: block;
-      /* To jest klucz do efektu "klejenia się" kółek */
-      filter: url('#goo');
-      -webkit-filter: url('#goo');
-    }
-
-    /* Ukrywamy SVG z definicją filtra, musi być w DOM, ale niewidoczne */
-    .svg-filter {
-      position: absolute;
-      width: 0;
-      height: 0;
-      pointer-events: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#06060d">
+<title>Kto wygra?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#06060d;
+    --ink:#e9ecff;
+    --ink-dim:rgba(233,236,255,.55);
+    --glass:rgba(255,255,255,.06);
+    --glass-edge:rgba(255,255,255,.13);
+    --winner:#ffd60a;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  html,body{
+    height:100%;
+    overflow:hidden;
+    overscroll-behavior:none;
+    background:var(--void);
+  }
+  body{
+    position:fixed; inset:0;
+    font-family:'Sora',-apple-system,system-ui,'Segoe UI',sans-serif;
+    color:var(--ink);
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #stage{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    display:block;
+    touch-action:none;
+    cursor:crosshair;
+  }
+  /* ---------- overlays ---------- */
+  .vignette{
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 52%, rgba(2,2,12,.62) 100%);
+  }
+  #ghost{
+    position:fixed; inset:0; z-index:2; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Unbounded','Sora',sans-serif; font-weight:800;
+    font-size:min(44vmin,420px); line-height:1;
+    color:#fff; opacity:0;
+  }
+  #ghost.show{ animation:ghostPop .85s cubic-bezier(.2,.7,.3,1) forwards; }
+  @keyframes ghostPop{
+    0%   { opacity:0;   transform:scale(1.4); }
+    14%  { opacity:.11; transform:scale(1.12); }
+    100% { opacity:0;   transform:scale(.9); }
+  }
+  /* ---------- idle title ---------- */
+  #titleWrap{
+    position:fixed; inset:0; z-index:3; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:0 24px;
+    transition:opacity .55s ease, transform .55s ease;
+  }
+  #titleWrap.hide{ opacity:0; transform:translateY(-16px) scale(.985); }
+  #titleWrap h1{
+    font-family:'Unbounded','Sora',sans-serif;
+    font-weight:800;
+    font-size:clamp(30px, 8vw, 84px);
+    letter-spacing:.01em;
+    line-height:1.04;
+    background:linear-gradient(115deg,#ffffff 0%, #aab6ff 34%, #ff7ad9 64%, #ffd166 96%);
+    background-size:220% 220%;
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+    filter:drop-shadow(0 6px 38px rgba(124,77,255,.35));
+    animation:shimmer 7s ease-in-out infinite;
+  }
+  @keyframes shimmer{
+    0%,100%{ background-position:0% 50%; }
+    50%    { background-position:100% 50%; }
+  }
+  #titleWrap .sub{
+    margin-top:18px;
+    font-size:clamp(14px,3.6vw,17px);
+    font-weight:400;
+    color:var(--ink-dim);
+    letter-spacing:.02em;
+    max-width:30ch;
+  }
+  .dots{ display:flex; gap:14px; margin-top:26px; }
+  .dots span{
+    width:14px; height:14px; border-radius:50%;
+    animation:dotPulse 1.6s ease-in-out infinite;
+  }
+  .dots span:nth-child(1){ background:#ff3b81; box-shadow:0 0 18px #ff3b81; }
+  .dots span:nth-child(2){ background:#00e5ff; box-shadow:0 0 18px #00e5ff; animation-delay:.22s; }
+  .dots span:nth-child(3){ background:#ffd60a; box-shadow:0 0 18px #ffd60a; animation-delay:.44s; }
+  @keyframes dotPulse{
+    0%,100%{ transform:scale(1);   opacity:.55; }
+    50%    { transform:scale(1.45); opacity:1; }
+  }
+  /* ---------- winner banner ---------- */
+  #banner{
+    position:fixed; left:0; right:0; top:11%; z-index:4; pointer-events:none;
+    text-align:center; padding:0 20px;
+    opacity:0; transform:scale(.7);
+  }
+  #banner.show{ animation:winPop .8s cubic-bezier(.18,1.6,.32,1) forwards; }
+  #banner.out{ transition:opacity .4s ease, transform .4s ease; opacity:0; transform:scale(.9); }
+  @keyframes winPop{
+    0%  { opacity:0; transform:scale(.55) translateY(14px); }
+    60% { opacity:1; }
+    100%{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  #banner h2{
+    font-family:'Unbounded','Sora',sans-serif;
+    font-weight:800;
+    font-size:clamp(34px,10vw,84px);
+    letter-spacing:.02em;
+    color:var(--winner);
+    text-shadow:0 0 22px var(--winner), 0 0 70px var(--winner), 0 4px 30px rgba(0,0,0,.5);
+  }
+  #banner p{
+    margin-top:12px;
+    font-size:clamp(13px,3.4vw,16px);
+    color:var(--ink-dim);
+  }
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:fixed; top:0; left:0; right:0; z-index:6;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:calc(12px + env(safe-area-inset-top)) 18px 12px;
+    pointer-events:none;
+  }
+  .brand{
+    font-family:'Unbounded','Sora',sans-serif;
+    font-weight:500; font-size:11px;
+    letter-spacing:.32em; text-transform:uppercase;
+    color:rgba(233,236,255,.5);
+  }
+  .iconbtn{
+    pointer-events:auto;
+    width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--glass);
+    border:1px solid var(--glass-edge);
+    color:#cdd5ff;
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    touch-action:manipulation;
+    cursor:pointer;
+    transition:transform .15s ease, background .2s ease;
+  }
+  .iconbtn:active{ transform:scale(.88); background:rgba(255,255,255,.12); }
+  .iconbtn svg{ width:22px; height:22px; }
+  /* ---------- status pill ---------- */
+  #status{
+    position:fixed; left:50%; z-index:5;
+    bottom:calc(20px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    padding:11px 22px;
+    border-radius:999px;
+    background:var(--glass);
+    border:1px solid var(--glass-edge);
+    -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+    font-size:13.5px; font-weight:600; letter-spacing:.04em;
+    color:rgba(233,236,255,.88);
+    pointer-events:none;
+    white-space:nowrap;
+    opacity:0; transition:opacity .35s ease;
+  }
+  #status.on{ opacity:1; }
+  #status.pop{ animation:statusPop .45s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes statusPop{
+    0%{ transform:translateX(-50%) scale(.92); }
+    55%{ transform:translateX(-50%) scale(1.05); }
+    100%{ transform:translateX(-50%) scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #titleWrap h1{ animation:none; }
+    .dots span{ animation:none; opacity:.8; }
+  }
+</style>
 </head>
 <body>
+<canvas id="stage"></canvas>
+<div class="vignette"></div>
+<div id="ghost">3</div>
 
-<svg class="svg-filter">
-  <defs>
-    <filter id="goo">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
-      <feColorMatrix in="blur" mode="matrix" values="
-        1 0 0 0 0  
-        0 1 0 0 0  
-        0 0 1 0 0  
-        0 0 0 19 -9" result="goo" />
-      <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
-    </filter>
-  </defs>
-</svg>
+<div id="titleWrap">
+  <h1 id="mainTitle">PALEC&nbsp;LOSU</h1>
+  <p class="sub" id="subline">Każdy kładzie palec na ekranie&nbsp;— po chwili los wskaże zwycięzcę.</p>
+  <div class="dots"><span></span><span></span><span></span></div>
+</div>
 
-<canvas id="canvas"></canvas>
+<div id="banner">
+  <h2>ZWYCIĘZCA!</h2>
+  <p id="bannerSub">Podnieście palce, aby zagrać ponownie</p>
+</div>
+
+<div class="topbar">
+  <div class="brand">✦ Kto wygra?</div>
+  <button class="iconbtn" id="soundBtn" aria-label="Wycisz dźwięk" aria-pressed="false">
+    <svg id="icoOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+      <path d="M18.6 5.6a9.5 9.5 0 0 1 0 12.8"/>
+    </svg>
+    <svg id="icoOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/>
+      <path d="M16 9l5 6"/><path d="M21 9l-5 6"/>
+    </svg>
+  </button>
+</div>
+
+<div id="status"></div>
 
 <script>
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  // Funkcja resize
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+(function(){
+'use strict';
+
+/* ============================== CONFIG ============================== */
+var hueCounter = Math.floor(Math.random() * 360);
+var R = 46;                 // base finger ring radius (CSS px)
+var COUNT_MS = 3000;        // countdown length
+var TAU = Math.PI*2;
+
+var PH = { IDLE:0, WAIT:1, COUNT:2, SPIN:3, WIN:4, OUT:5 };
+
+var TITLES = [
+  "Kto odpala wapo?",
+  "Kto zapierdala do żabki?",
+  "Kto idzie po piwo?",
+  "Może lepiej tego nie róbcie…",
+  "Kto dzisiaj jest bardziej sexxxxy?",
+  "Kto dzisiaj skacze po kutasie?",
+  "Kto kręci śmierdziela?",
+  "Kto dzisiaj leci po browce?",
+  "Kto zapierdala do Żabki po 4 paczki taniego wina?",
+  "Kto robi kolejkę shotów dla wszystkich?",
+  "Kto dzisiaj pije za karę do dna?",
+  "Kto idzie po kebaba o 4 w nocy?",
+  "Kto dzisiaj jest najbardziej napalony?",
+  "Kto skacze po kutasie najmocniej?",
+  "Kto musi opowiedzieć swoją najgorszą historię seksu?",
+  "Kto dzisiaj wysyła nudesa swojemu EX?",
+  "Kto jest największą dziwką w tym pokoju?",
+  "Kto musi zrobić lap dance?",
+  "Kto odpala jointa?",
+  "Kto skręca grubego?",
+  "Kto dzisiaj wali szczura pierwszy?",
+  "Kto dzisiaj pierwszy zaśnie? napewno nie śruba",
+  "Kto ma największe szanse zdechnąć z kaca jutro?",
+  "Kto ma najbrudniejsze myśli?",
+  "Kto umrze jako dziewica?",
+  "Kto umrze jako prawiczek?",
+  "Kto dzisiaj porucha?",
+  "Kto poszedłby do łóżka z najgorszym typem w grupie?",
+  "Kto ma najwięcej std w CV?",
+  "Kto dzisiaj liże cipkę / obciąga kutasowi (wybór losowy)?",
+  "Kto skończy wieczór rzygając?",
+  "Kto jest największym ćpunem tutaj?",
+  "Może lepiej tego nie róbcie…",
+  "Kto dostaje truth or dare w wersji hard?",
+  "Kto idzie na balkon i krzyczy „macie Mefedron?”?",
+  "Losuj kurwo",
+  "Kto jest agentem Izraela?",
+  "Kto ma największego kutasa?",
+  "Kto ma najciaśniejszą cipkę?",
+  "Kto jest tajnym furry?",
+  "Kto jest tajnym cuckoldem?",
+  "Kto poszedłby na gangbang z resztą pokoju?",
+  "Kto liże cipę jak pies wodę z miski?",
+  "Kto musi przyznać się do ostatniego pornosu jaki odpalił?",
+  "Kto ma największe szanse złapać HIV?",
+  "Kto dzisiaj zajebie kreskę z muszli kibla?",
+  "Kto dzisiaj liże dupę (dosłownie – zadanie)?",
+  "Kto skończy noc ssąc palce stóp osoby obok?",
+  "Kto dzisiaj rucha bez gumy?",
+  "Kto wygrywa lot na wyspe Epsteina?"
+];
+
+/* ============================== DOM ============================== */
+var canvas   = document.getElementById('stage');
+var ctx      = canvas.getContext('2d');
+var titleEl  = document.getElementById('titleWrap');
+var mainTitle= document.getElementById('mainTitle');
+var subEl    = document.getElementById('subline');
+var ghostEl  = document.getElementById('ghost');
+var bannerEl = document.getElementById('banner');
+var bannerSub= document.getElementById('bannerSub');
+var statusEl = document.getElementById('status');
+var soundBtn = document.getElementById('soundBtn');
+var icoOn    = document.getElementById('icoOn');
+var icoOff   = document.getElementById('icoOff');
+
+/* ============================== STATE ============================== */
+var W=0, H=0, DPR=1;
+var phase = PH.IDLE;
+
+function setRandomTitle() {
+  if (mainTitle) {
+    mainTitle.textContent = TITLES[Math.floor(Math.random() * TITLES.length)];
   }
-  window.addEventListener('resize', resize);
-  resize();
+}
+setRandomTitle();
+var fingers = new Map();      // id -> finger
+var particles = [];
+var ripples = [];
+var stars = [];
+var blobs = [];
+var rawTouches = new Set();   // physical touches currently down
 
-  const touches = {}; 
+var countStart = 0, countShown = -1;
+var spin = null;              // {ids, curi, times[], hop, start, winneri}
+var winnerId = null, winnerColor = '#fff';
+var winAt = 0, winEndAt = 0, winStatusShown = false, sparkAt = 0;
+var outAt = 0;
+var waitPulseAt = 0;
+var flash = 0;
+var mouseSeq = 0, lastTouchAt = 0;
+var touchMode = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let freezeCheckTimeout = null;
-  let freezeTriggered = false;
-  let backgroundColorChanged = false;
-  let winnerAnimation = false;
-  let pulsingAnimation = false;
-  let pulsingStartTime = 0;
-  let winnerTouch = null;
-  let winnerAnimationStartTime = 0;
-  let winnerAnimationRadius = 0;
-  let animationId = null;
+/* ============================== UTILS ============================== */
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function rand(a,b){ return a+Math.random()*(b-a); }
+function easeOutCubic(t){ t=clamp(t,0,1); return 1-Math.pow(1-t,3); }
+function easeInCubic(t){ t=clamp(t,0,1); return t*t*t; }
+function easeOutBack(t){ t=clamp(t,0,1); var c1=1.70158,c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); }
+function easeInBack(t){ t=clamp(t,0,1); var c1=1.70158,c3=c1+1; return c3*t*t*t-c1*t*t; }
+function hexRGB(hex){ var n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function rgba(hex,a){ var c=hexRGB(hex); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
 
-  const springStrength = 0.08;
-  const damping = 0.85;
+/* glow sprites (cached radial gradients — fast on Safari, no shadowBlur) */
+var spriteCache = {};
+function sprite(hex){
+  if(spriteCache[hex]) return spriteCache[hex];
+  var s = document.createElement('canvas'); s.width = s.height = 256;
+  var c = s.getContext('2d');
+  var g = c.createRadialGradient(128,128,0,128,128,128);
+  g.addColorStop(0,   rgba(hex,.95));
+  g.addColorStop(.22, rgba(hex,.5));
+  g.addColorStop(.55, rgba(hex,.14));
+  g.addColorStop(1,   rgba(hex,0));
+  c.fillStyle = g; c.fillRect(0,0,256,256);
+  spriteCache[hex] = s; return s;
+}
+function drawGlow(hex,x,y,d,a){
+  if(d<=0||a<=0) return;
+  ctx.globalAlpha = clamp(a,0,1);
+  ctx.drawImage(sprite(hex), x-d/2, y-d/2, d, d);
+  ctx.globalAlpha = 1;
+}
 
-  function getRandomColor() {
-    // Jaśniejsze kolory dla lepszego efektu mieszania na ciemnym tle
-    const r = Math.floor(Math.random() * 155) + 100;
-    const g = Math.floor(Math.random() * 155) + 100;
-    const b = Math.floor(Math.random() * 155) + 100;
-    return `rgb(${r}, ${g}, ${b})`;
+/* ============================== AUDIO ============================== */
+var actx=null, master=null, muted=false;
+function audio(){
+  if(!actx){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    actx = new AC();
+    master = actx.createGain();
+    master.gain.value = .5;
+    master.connect(actx.destination);
   }
+  if(actx.state==='suspended'){ actx.resume(); }
+  return actx;
+}
+function tone(freq,dur,type,vol,delay,slideTo){
+  var a=audio(); if(!a||muted) return;
+  var t=a.currentTime+(delay||0);
+  var o=a.createOscillator(), g=a.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  if(slideTo){ o.frequency.exponentialRampToValueAtTime(slideTo,t+dur); }
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t+dur+.06);
+}
+function noiseBurst(dur,vol,delay){
+  var a=audio(); if(!a||muted) return;
+  var len=Math.floor(a.sampleRate*dur);
+  var buf=a.createBuffer(1,len,a.sampleRate), d=buf.getChannelData(0);
+  for(var i=0;i<len;i++){ d[i]=(Math.random()*2-1)*(1-i/len); }
+  var s=a.createBufferSource(); s.buffer=buf;
+  var f=a.createBiquadFilter(); f.type='highpass'; f.frequency.value=1400;
+  var g=a.createGain(); g.gain.value=vol;
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(a.currentTime+(delay||0));
+}
+function sndPlace(i){ tone(420+(i%8)*55,.16,'sine',.22); tone(840+(i%8)*55,.09,'triangle',.1,.015); }
+function sndLift(){ tone(360,.13,'sine',.12,0,210); }
+function sndSec(){ tone(920,.07,'triangle',.2); tone(1840,.05,'sine',.07,.01); }
+function sndHop(p){ var f=360*Math.pow(2.5,p); tone(f,.05,'triangle',.16); }
+function sndWin(){
+  var ch=[523.25,659.25,783.99,1046.5];
+  for(var i=0;i<ch.length;i++){ tone(ch[i],.95,'sine',.16,i*.035); }
+  tone(2093,.5,'triangle',.07,.08);
+  tone(72,.28,'sine',.4,0,38);
+  noiseBurst(.4,.18,.02);
+}
 
-  function drawCircles() {
-    // Czyścimy canvas w standardowym trybie
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const currentTime = Date.now();
-    
-    // WAŻNE: Zmieniamy tryb mieszania na 'screen' lub 'lighter'
-    // To sprawia, że kolory się miksują (dodają do siebie)
-    if (!backgroundColorChanged) {
-      ctx.globalCompositeOperation = 'screen';
+soundBtn.addEventListener('click', function(e){
+  e.stopPropagation();
+  muted = !muted;
+  icoOn.style.display  = muted ? 'none' : '';
+  icoOff.style.display = muted ? '' : 'none';
+  soundBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+  if(!muted){ tone(660,.1,'sine',.18); }
+});
+
+/* ============================== UI SYNC ============================== */
+function setStatus(text){
+  if(!text){ statusEl.classList.remove('on'); return; }
+  if(statusEl.textContent !== text){
+    statusEl.textContent = text;
+    statusEl.classList.remove('pop');
+    void statusEl.offsetWidth;
+    statusEl.classList.add('pop');
+  }
+  statusEl.classList.add('on');
+}
+function showGhost(n){
+  ghostEl.textContent = n;
+  ghostEl.classList.remove('show');
+  void ghostEl.offsetWidth;
+  ghostEl.classList.add('show');
+}
+function showBanner(){
+  bannerEl.style.setProperty('--winner', winnerColor);
+  bannerEl.querySelector('h2').style.color = winnerColor;
+  bannerEl.querySelector('h2').style.textShadow =
+    '0 0 22px '+winnerColor+', 0 0 70px '+winnerColor+', 0 4px 30px rgba(0,0,0,.5)';
+  bannerSub.textContent = touchMode
+    ? 'Podnieście palce, aby zagrać ponownie'
+    : 'Kliknij, aby zagrać jeszcze raz';
+  bannerEl.classList.remove('out');
+  bannerEl.classList.add('show');
+}
+function hideBanner(){
+  bannerEl.classList.add('out');
+  bannerEl.classList.remove('show');
+}
+function aliveList(){
+  var out=[];
+  fingers.forEach(function(f){ if(f.state==='alive') out.push(f); });
+  return out;
+}
+function syncUI(){
+  var n = aliveList().length;
+  titleEl.classList.toggle('hide', phase!==PH.IDLE);
+  if(phase===PH.IDLE){
+    setStatus('');
+    subEl.textContent = touchMode
+      ? 'Każdy kładzie palec na ekranie — po chwili los wskaże zwycięzcę.'
+      : 'Tryb myszy: klikaj, aby dodawać i zdejmować „palce”.';
+  } else if(phase===PH.WAIT){
+    setStatus(touchMode ? '1 gracz — dołóżcie palce (min. 2)' : '1 gracz — kliknij, aby dodać więcej');
+  } else if(phase===PH.COUNT){
+    setStatus(n+' graczy • losowanie…');
+  } else if(phase===PH.SPIN){
+    setStatus('Los decyduje…');
+  } else if(phase===PH.WIN){
+    if(winStatusShown){
+      setStatus(touchMode ? 'Podnieście palce, aby zagrać ponownie' : 'Kliknij, aby zagrać ponownie');
     } else {
-      ctx.globalCompositeOperation = 'source-over';
+      setStatus('');
     }
-    
-    if (winnerAnimation) {
-      const elapsedTime = currentTime - winnerAnimationStartTime;
-      const animDuration = 2000;
-      
-      if (elapsedTime < animDuration) {
-        const progress = elapsedTime / animDuration;
-        const easeInOut = progress < 0.5 
-          ? 2 * progress * progress 
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-        
-        const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
-        winnerAnimationRadius = winnerTouch.radius + easeInOut * (maxRadius - winnerTouch.radius);
-        
-        // Rysowanie zwycięzcy
-        ctx.beginPath();
-        ctx.arc(winnerTouch.x, winnerTouch.y, winnerAnimationRadius, 0, Math.PI * 2);
-        ctx.fillStyle = winnerTouch.color;
-        ctx.fill();
-        
-        // Rysowanie reszty (zanikanie)
-        for (const id in touches) {
-          const touch = touches[id];
-          if (touch !== winnerTouch) {
-            const shrinkRadius = touch.radius * (1 - easeInOut);
-            if (shrinkRadius > 0.5) {
-              ctx.beginPath();
-              ctx.arc(touch.x, touch.y, shrinkRadius, 0, Math.PI * 2);
-              ctx.fillStyle = touch.color;
-              ctx.fill();
-            }
-          }
-        }
-        
-        animationId = requestAnimationFrame(drawCircles);
-      } else {
-        document.body.style.backgroundColor = winnerTouch.color;
-        // Usuwamy filtr na koniec, żeby tło było jednolite
-        canvas.style.filter = 'none'; 
-        winnerAnimation = false;
-        animationId = null;
-      }
-    } else if (pulsingAnimation) {
-      const elapsedTime = currentTime - pulsingStartTime;
-      const pulseDuration = 3000;
-      
-      if (elapsedTime < pulseDuration) {
-        const pulseProgress = (elapsedTime % 1000) / 1000;
-        const pulseIntensity = Math.sin(pulseProgress * Math.PI);
-        const pulseScale = 1 + pulseIntensity * 0.3;
-        
-        for (const id in touches) {
-          const touch = touches[id];
-          
-          if (touch.targetX !== undefined) {
-            const dx = touch.targetX - touch.x;
-            const dy = touch.targetY - touch.y;
-            touch.vx = (touch.vx || 0) + dx * springStrength;
-            touch.vy = (touch.vy || 0) + dy * springStrength;
-            touch.vx *= damping;
-            touch.vy *= damping;
-            touch.x += touch.vx;
-            touch.y += touch.vy;
-          }
-          
-          const pulsedRadius = touch.targetRadius * pulseScale;
-          ctx.beginPath();
-          ctx.arc(touch.x, touch.y, pulsedRadius, 0, Math.PI * 2);
-          ctx.fillStyle = touch.color;
-          ctx.fill();
-          
-          touch.radius = pulsedRadius;
-        }
-        
-        animationId = requestAnimationFrame(drawCircles);
-      } else {
-        const touchArray = Object.values(touches);
-        if (touchArray.length >= 2) {
-          const winnerIndex = Math.floor(Math.random() * touchArray.length);
-          winnerTouch = touchArray[winnerIndex];
-          pulsingAnimation = false;
-          winnerAnimation = true;
-          winnerAnimationStartTime = currentTime;
-          backgroundColorChanged = true;
-          drawCircles();
-          return;
-        } else {
-          pulsingAnimation = false;
-          animationId = null;
-        }
-      }
-    } else {
-      // Normalne rysowanie
-      let animationInProgress = false;
-      
-      for (const id in touches) {
-        const touch = touches[id];
-        
-        if (touch.targetX !== undefined) {
-          const dx = touch.targetX - touch.x;
-          const dy = touch.targetY - touch.y;
-          touch.vx = (touch.vx || 0) + dx * springStrength;
-          touch.vy = (touch.vy || 0) + dy * springStrength;
-          touch.vx *= damping;
-          touch.vy *= damping;
-          touch.x += touch.vx;
-          touch.y += touch.vy;
-          
-          if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1 || Math.abs(touch.vx) > 0.1) {
-            animationInProgress = true;
-          }
-        }
-        
-        const elapsedTime = currentTime - touch.createdAt;
-        const animDuration = 500;
-        
-        if (elapsedTime < animDuration) {
-          const progress = elapsedTime / animDuration;
-          const easeOut = 1 - Math.pow(1 - progress, 3);
-          touch.radius = touch.targetRadius * easeOut;
-          animationInProgress = true;
-        } else {
-          touch.radius = touch.targetRadius;
-        }
-        
-        ctx.beginPath();
-        ctx.arc(touch.x, touch.y, touch.radius, 0, Math.PI * 2);
-        ctx.fillStyle = touch.color;
-        ctx.fill();
-      }
-      
-      if (animationInProgress) {
-        animationId = requestAnimationFrame(drawCircles);
-      } else {
-        animationId = null;
-      }
-    }
+  } else {
+    setStatus('');
   }
+}
 
-  function startAnimation() {
-    if (!animationId) {
-      animationId = requestAnimationFrame(drawCircles);
-    }
+/* ============================== GAME LOGIC ============================== */
+function hslToHex(h, s, l) {
+  l /= 100;
+  var a = s * Math.min(l, 1 - l) / 100;
+  function f(n) {
+    var k = (n + h / 30) % 12;
+    var color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    var hex = Math.round(255 * color).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
   }
+  return '#' + f(0) + f(8) + f(4);
+}
 
-  function startPulsingAnimation() {
-    const touchArray = Object.values(touches);
-    if (touchArray.length >= 2 && !backgroundColorChanged && !pulsingAnimation) {
-      pulsingAnimation = true;
-      pulsingStartTime = Date.now();
-      startAnimation();
-    }
+function pickColor(){
+  hueCounter = (hueCounter + 137.5) % 360; // Złoty kąt zapewniający równomierny rozkład kolorów
+  var h = Math.floor(hueCounter);
+  var s = 85 + Math.floor(Math.random() * 15); // Nasycenie 85-100%
+  var l = 55 + Math.floor(Math.random() * 10); // Jasność 55-65%
+  return hslToHex(h, s, l);
+}
+function spawnRipple(x,y,color,maxR,dur,width,alpha){
+  ripples.push({x:x,y:y,color:color,maxR:maxR,dur:dur,width:width,alpha:alpha,start:performance.now()});
+}
+function addFinger(id,x,y){
+  if(phase===PH.SPIN || phase===PH.WIN || phase===PH.OUT){
+    if(phase===PH.WIN){ spawnRipple(x,y,'#ffffff',70,500,4,.3); }
+    return;
   }
-
-  function resetFreezeCheck() {
-    if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
-    freezeTriggered = false;
-    
-    // Jeśli ktoś ruszy palcem podczas pulsowania, przerywamy (opcjonalne)
-    if(pulsingAnimation && Object.keys(touches).length < 2) {
-        pulsingAnimation = false;
-    }
-
-    if (Object.keys(touches).length >= 2) {
-      freezeCheckTimeout = setTimeout(() => {
-        if (!freezeTriggered && Object.keys(touches).length >= 2) {
-          freezeTriggered = true;
-          startPulsingAnimation();
-        }
-      }, 2000); // Zmniejszyłem czas oczekiwania na 2s dla lepszego UX
-    }
-  }
-
-  function handleTouchStart(event) {
-    if (winnerAnimation || backgroundColorChanged || pulsingAnimation) return;
-    event.preventDefault();
-    for (let i = 0; i < event.changedTouches.length; i++) {
-      const touch = event.changedTouches[i];
-      touches[touch.identifier] = {
-        x: touch.clientX, y: touch.clientY,
-        targetX: touch.clientX, targetY: touch.clientY,
-        vx: 0, vy: 0,
-        color: getRandomColor(),
-        radius: 0,
-        targetRadius: 65, // Nieco większe kółka bo filtr je trochę "zjada"
-        createdAt: Date.now()
-      };
-    }
-    startAnimation();
-    resetFreezeCheck();
-  }
-
-  function handleTouchMove(event) {
-    if (winnerAnimation || backgroundColorChanged) return;
-    event.preventDefault();
-    for (let i = 0; i < event.touches.length; i++) {
-      const touch = event.touches[i];
-      if (touches[touch.identifier]) {
-        touches[touch.identifier].targetX = touch.clientX;
-        touches[touch.identifier].targetY = touch.clientY;
-      }
-    }
-    startAnimation();
-  }
-
-  function handleTouchEnd(event) {
-    if (winnerAnimation || backgroundColorChanged) return;
-    for (let i = 0; i < event.changedTouches.length; i++) {
-      delete touches[event.changedTouches[i].identifier];
-    }
-    startAnimation();
-    resetFreezeCheck();
-  }
-
-  canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
-  canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
-  canvas.addEventListener('touchend', handleTouchEnd, false);
-  canvas.addEventListener('touchcancel', handleTouchEnd, false);
-
-  let mouseDown = false;
-  canvas.addEventListener('mousedown', (e) => {
-    if (winnerAnimation || backgroundColorChanged || pulsingAnimation) return;
-    mouseDown = true;
-    touches['mouse'] = { 
-      x: e.clientX, y: e.clientY,
-      targetX: e.clientX, targetY: e.clientY,
-      vx: 0, vy: 0,
-      color: getRandomColor(),
-      radius: 0, targetRadius: 40,
-      createdAt: Date.now()
-    };
-    startAnimation();
-    resetFreezeCheck();
+  var color = pickColor();
+  fingers.set(id,{
+    id:id, x:x, y:y, tx:x, ty:y, vx:0, vy:0,
+    color:color, born:performance.now(),
+    seed:Math.random()*TAU,
+    state:'alive', leftAt:0, elimAt:0, hopAt:-1e9
   });
+  spawnRipple(x,y,color,96,620,6,.85);
+  sndPlace(fingers.size);
+  recount();
+}
+function removeFinger(id){
+  if(phase===PH.SPIN || phase===PH.WIN || phase===PH.OUT) return;
+  var f = fingers.get(id);
+  if(!f || f.state!=='alive') return;
+  f.state='leaving'; f.leftAt=performance.now();
+  sndLift();
+  recount();
+}
+function moveFinger(id,x,y){
+  if(phase===PH.SPIN) return;
+  var f = fingers.get(id);
+  if(f && (f.state==='alive' || f.state==='winner')){ f.tx=x; f.ty=y; }
+}
+function recount(){
+  var n = aliveList().length;
+  if(n===0){ phase=PH.IDLE; }
+  else if(n===1){ phase=PH.WAIT; waitPulseAt=performance.now()+600; }
+  else{ phase=PH.COUNT; countStart=performance.now(); countShown=-1; }
+  syncUI();
+}
+function startSpin(){
+  var alive = aliveList();
+  if(alive.length<2){ recount(); return; }
+  var ids = alive.map(function(f){ return f.id; });
+  var len = ids.length;
+  var curi = Math.floor(Math.random()*len);
+  var winneri = Math.floor(Math.random()*len);
+  var hops = 10 + Math.floor(Math.random()*4);
+  hops += (winneri - ((curi+hops)%len) + len) % len;
+  var T = 750 + 110*hops;
+  var times = [];
+  for(var k=0;k<hops;k++){ times.push(T*Math.pow((k+1)/hops,1.45)); }
+  spin = { ids:ids, curi:curi, times:times, hop:0, start:performance.now(), winneri:winneri, hops:hops };
+  phase = PH.SPIN;
+  syncUI();
+}
+function triggerWin(){
+  var now = performance.now();
+  var f = fingers.get(spin.ids[spin.curi]);
+  if(!f){ hardReset(); return; }
+  winnerId = f.id; winnerColor = f.color;
+  f.state='winner';
+  winAt = now; winEndAt = 0; winStatusShown = false; sparkAt = now+450;
+  var i=0;
+  fingers.forEach(function(o){
+    if(o.state==='alive'){ o.state='loser'; o.elimAt = now + (i++)*60; }
+  });
+  /* nova */
+  flash = 1;
+  var burst = reducedMotion ? 36 : 96;
+  for(var p=0;p<burst;p++){
+    var ang = Math.random()*TAU;
+    var sp = rand(110,580);
+    particles.push({
+      x:f.x, y:f.y,
+      vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp,
+      life:rand(.5,1.15), maxLife:1.15,
+      size:rand(2,5.5),
+      color:(p%3===0)?'#ffffff':winnerColor,
+      drag:.93
+    });
+  }
+  var mx = Math.max(W,H)*.55;
+  spawnRipple(f.x,f.y,winnerColor, mx, 900, 14, .8);
+  spawnRipple(f.x,f.y,'#ffffff',  mx*.8, 1020, 8, .55);
+  spawnRipple(f.x,f.y,winnerColor, mx*1.2, 1200, 5, .35);
+  sndWin();
+  phase = PH.WIN;
+  setTimeout(showBanner, 240);
+  if(!touchMode){ winEndAt = winAt + 3000; }
+  syncUI();
+}
+function beginOut(){
+  phase = PH.OUT; outAt = performance.now();
+  hideBanner();
+  syncUI();
+}
+function hardReset(){
+  fingers.clear();
+  particles.length = 0;
+  ripples.length = 0;
+  spin = null; winnerId = null; flash = 0;
+  phase = PH.IDLE;
+  hideBanner();
+  setRandomTitle();
+  syncUI();
+}
 
-  canvas.addEventListener('mousemove', (e) => {
-    if (winnerAnimation || backgroundColorChanged) return;
-    if (mouseDown) {
-      touches['mouse'].targetX = e.clientX;
-      touches['mouse'].targetY = e.clientY;
-      startAnimation();
+/* ============================== INPUT ============================== */
+function cPos(t){
+  var r = canvas.getBoundingClientRect();
+  return [t.clientX - r.left, t.clientY - r.top];
+}
+canvas.addEventListener('touchstart', function(e){
+  e.preventDefault();
+  lastTouchAt = performance.now(); touchMode = true;
+  audio();
+  for(var i=0;i<e.changedTouches.length;i++){
+    var t = e.changedTouches[i], p = cPos(t);
+    rawTouches.add(t.identifier);
+    addFinger(t.identifier, p[0], p[1]);
+  }
+  if(phase===PH.WIN){ winEndAt = 0; }
+}, {passive:false});
+canvas.addEventListener('touchmove', function(e){
+  e.preventDefault();
+  for(var i=0;i<e.changedTouches.length;i++){
+    var t = e.changedTouches[i], p = cPos(t);
+    moveFinger(t.identifier, p[0], p[1]);
+  }
+}, {passive:false});
+function touchEnd(e){
+  e.preventDefault();
+  for(var i=0;i<e.changedTouches.length;i++){
+    var t = e.changedTouches[i];
+    rawTouches.delete(t.identifier);
+    removeFinger(t.identifier);
+  }
+  if(phase===PH.WIN && rawTouches.size===0 && !winEndAt){
+    winEndAt = Math.max(performance.now(), winAt+1100) + 750;
+  }
+}
+canvas.addEventListener('touchend', touchEnd, {passive:false});
+canvas.addEventListener('touchcancel', touchEnd, {passive:false});
+
+/* desktop fallback: clicks toggle simulated fingers */
+canvas.addEventListener('click', function(e){
+  if(touchMode && performance.now()-lastTouchAt < 1200) return;
+  audio();
+  var p = cPos(e);
+  if(phase===PH.WIN){ beginOut(); return; }
+  if(phase===PH.SPIN || phase===PH.OUT) return;
+  var hit = null;
+  fingers.forEach(function(f){
+    if(f.state==='alive' && Math.hypot(f.x-p[0], f.y-p[1]) < R*1.5){ hit = f.id; }
+  });
+  if(hit!==null){ removeFinger(hit); }
+  else{ addFinger('m'+(mouseSeq++), p[0], p[1]); }
+});
+document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+document.addEventListener('dblclick', function(e){ e.preventDefault(); });
+
+/* ============================== WORLD ============================== */
+function resize(){
+  DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width  = Math.round(W*DPR);
+  canvas.height = Math.round(H*DPR);
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function(){ setTimeout(resize,120); });
+resize();
+
+for(var s=0;s<70;s++){
+  stars.push({ x:Math.random(), y:Math.random(), r:rand(.6,1.8), ph:Math.random()*TAU, sp:rand(.4,1.4) });
+}
+blobs = [
+  { c:'#3b1d6e', a:.4,  px:.22, py:.3,  rx:.2,  ry:.16, sp:.00006, ph:0,   sz:.85 },
+  { c:'#12345f', a:.38, px:.78, py:.7,  rx:.18, ry:.2,  sp:.00005, ph:2.1, sz:.95 },
+  { c:'#0e4a45', a:.3,  px:.55, py:.18, rx:.22, ry:.14, sp:.00007, ph:4.2, sz:.7  }
+];
+
+/* ============================== UPDATE ============================== */
+function update(now, dt){
+  /* finger position bouncy spring + lifecycle cleanup */
+  var tension = 300;
+  var friction = 14;
+  var toDelete = [];
+  fingers.forEach(function(f){
+    var ax = (f.tx - f.x) * tension - f.vx * friction;
+    var ay = (f.ty - f.y) * tension - f.vy * friction;
+    f.vx += ax * dt;
+    f.vy += ay * dt;
+    f.x += f.vx * dt;
+    f.y += f.vy * dt;
+    var dot = (f.x - f.tx) * f.vx + (f.y - f.ty) * f.vy;
+    if(f.prevDot > 0 && dot <= 0){
+      var d2 = (f.x - f.tx)*(f.x - f.tx) + (f.y - f.ty)*(f.y - f.ty);
+      if(d2 > 64){
+        spawnRipple(f.x, f.y, f.color, 75, 650, 3.5, 0.45);
+      }
     }
+    f.prevDot = dot;
+    if(f.state==='leaving' && now-f.leftAt > 340){ toDelete.push(f.id); }
+    if(f.state==='loser'   && now-f.elimAt > 620){ toDelete.push(f.id); }
   });
+  for(var i=0;i<toDelete.length;i++){ fingers.delete(toDelete[i]); }
 
-  canvas.addEventListener('mouseup', () => {
-    if (winnerAnimation || backgroundColorChanged) return;
-    mouseDown = false;
-    delete touches['mouse'];
-    startAnimation();
-    resetFreezeCheck();
-  });
-  
-  window.addEventListener('contextmenu', e => e.preventDefault());
+  if(phase===PH.WAIT){
+    // Usunięto ciągłe pulsowanie, zostawiamy tylko fizykę odbijania
+  }
+  else if(phase===PH.COUNT){
+    var p = (now-countStart)/COUNT_MS;
+    var idx = Math.floor(p*3);
+    if(idx!==countShown && idx<3){
+      countShown = idx;
+      showGhost(3-idx);
+      sndSec();
+    }
+    if(p>=1){ startSpin(); }
+  }
+  else if(phase===PH.SPIN && spin){
+    var el = now - spin.start;
+    while(spin.hop < spin.hops && el >= spin.times[spin.hop]){
+      spin.curi = (spin.curi+1) % spin.ids.length;
+      var prog = spin.hop / spin.hops;
+      sndHop(prog);
+      var hf = fingers.get(spin.ids[spin.curi]);
+      if(hf){ hf.hopAt = now; spawnRipple(hf.x,hf.y,'#ffffff',64,360,4,.5); }
+      spin.hop++;
+      if(spin.hop>=spin.hops){ triggerWin(); break; }
+    }
+  }
+  else if(phase===PH.WIN){
+    if(!winStatusShown && now > winAt+1100){ winStatusShown=true; syncUI(); }
+    /* orbiting sparkles around the winner */
+    var wf = fingers.get(winnerId);
+    if(wf && now>sparkAt && particles.length<500){
+      sparkAt = now + (reducedMotion?220:90);
+      var a = Math.random()*TAU, rr = R*1.55;
+      particles.push({
+        x:wf.x+Math.cos(a)*rr, y:wf.y+Math.sin(a)*rr,
+        vx:-Math.sin(a)*rand(30,80)+Math.cos(a)*20,
+        vy: Math.cos(a)*rand(30,80)+Math.sin(a)*20,
+        life:rand(.45,.85), maxLife:.85,
+        size:rand(1.5,3), color:(Math.random()<.4)?'#ffffff':winnerColor, drag:.96
+      });
+    }
+    if(!touchMode && winEndAt && now>winEndAt){ beginOut(); }
+    if(touchMode && winEndAt && rawTouches.size===0 && now>winEndAt){ beginOut(); }
+  }
+  else if(phase===PH.OUT){
+    if(now-outAt > 560){ hardReset(); }
+  }
 
-  // Przyciski
-  const buttonContainer = document.createElement('div');
-  buttonContainer.style.cssText = `
-    position: fixed; bottom: 20px; right: 20px; z-index: 100;
-    display: flex; gap: 15px;
-  `;
-  
-  // Styl przycisków (szklany efekt żeby pasował do klimatu)
-  const btnStyle = `
-    width: 44px; height: 44px;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 50%;
-    font-size: 20px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: white;
-    transition: transform 0.2s;
-  `;
+  /* particles */
+  for(var k=particles.length-1;k>=0;k--){
+    var pt = particles[k];
+    pt.life -= dt;
+    if(pt.life<=0){ particles.splice(k,1); continue; }
+    var dr = Math.pow(pt.drag, dt*60);
+    pt.vx*=dr; pt.vy*=dr;
+    pt.x += pt.vx*dt; pt.y += pt.vy*dt;
+  }
+  /* ripples */
+  for(var r2=ripples.length-1;r2>=0;r2--){
+    if(now-ripples[r2].start > ripples[r2].dur){ ripples.splice(r2,1); }
+  }
+  if(flash>0){ flash = Math.max(0, flash - dt*2.1); }
+}
 
-  const resetButton = document.createElement('div');
-  resetButton.innerText = '🔄';
-  resetButton.style.cssText = btnStyle;
-  resetButton.onclick = () => {
-    backgroundColorChanged = false;
-    winnerAnimation = false;
-    pulsingAnimation = false;
-    winnerTouch = null;
-    if (freezeCheckTimeout) clearTimeout(freezeCheckTimeout);
-    freezeTriggered = false;
-    for (const id in touches) delete touches[id];
-    document.body.style.backgroundColor = '#1a1a1a';
-    canvas.style.filter = "url('#goo')"; // Przywróć filtr
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
+/* ============================== RENDER ============================== */
+function fingerScale(f, now){
+  var s;
+  if(f.state==='leaving'){
+    s = 1 - easeInCubic((now-f.leftAt)/320);
+  } else if(f.state==='loser'){
+    var t = (now-f.elimAt)/560;
+    s = t<0 ? 1 : 1 - easeInBack(t);
+  } else if(f.state==='winner'){
+    s = lerp(1, 1.32, easeOutBack((now-winAt)/650));
+  } else {
+    s = easeOutBack((now-f.born)/380);
+  }
+  return Math.max(0, s);
+}
+function drawFinger(f, now){
+  var s = fingerScale(f, now);
+  if(s<=.02) return;
 
-  const homeButton = document.createElement('div');
-  homeButton.innerText = '🏠';
-  homeButton.style.cssText = btnStyle;
-  homeButton.onclick = () => { window.location.href = 'index.html'; };
+  var amp=.035, freq=1.1;
+  if(phase===PH.COUNT){
+    var cp = clamp((now-countStart)/COUNT_MS,0,1);
+    amp = lerp(.035,.09,cp); freq = lerp(1.2,3.2,cp);
+  }
+  if(f.state==='winner'){ amp=.05; freq=1.7; }
+  var pulse = 1 + amp*Math.sin(now/1000*freq*TAU + f.seed);
+  var sc = s*pulse;
+  var hop = Math.exp(-(now-f.hopAt)/130);
+  if(hop>.01){ sc *= 1 + .22*hop; }
 
-  buttonContainer.appendChild(resetButton);
-  buttonContainer.appendChild(homeButton);
-  document.body.appendChild(buttonContainer);
+  var dim = 1;
+  if(phase===PH.SPIN && spin && f.id!==spin.ids[spin.curi]){ dim=.4; }
+  var x=f.x, y=f.y, c=f.color;
+  var alphaMul = (f.state==='loser') ? clamp(1-(now-f.elimAt)/560,0,1) : 1;
 
+  /* glow layers */
+  ctx.globalCompositeOperation='lighter';
+  drawGlow(c, x, y, R*4.9*sc, .8*dim*alphaMul);
+  drawGlow(c, x, y, R*2.0*sc, .55*dim*alphaMul);
+  if(f.state==='winner'){
+    var halo = 1 + .12*Math.sin(now/300);
+    drawGlow(c, x, y, R*8.2*sc*halo, .4);
+    drawGlow('#ffffff', x, y, R*2.4*sc, .3);
+  }
+  if(phase===PH.SPIN && spin && f.id===spin.ids[spin.curi]){
+    drawGlow('#ffffff', x, y, R*5.4*sc, .55);
+  }
+  ctx.globalCompositeOperation='source-over';
+
+  ctx.globalAlpha = dim*alphaMul;
+
+  /* main ring */
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x,y,R*sc,0,TAU); ctx.stroke();
+
+  /* rotating dashed arcs */
+  ctx.save();
+  ctx.lineWidth = 4; ctx.lineCap='round';
+  ctx.setLineDash([26,16]);
+  ctx.lineDashOffset = -now/14;
+  ctx.strokeStyle = rgba(c,.9);
+  ctx.beginPath(); ctx.arc(x,y,R*1.24*sc,0,TAU); ctx.stroke();
+  ctx.lineDashOffset = now/19;
+  ctx.setLineDash([14,22]);
+  ctx.strokeStyle = rgba('#ffffff',.45);
+  ctx.beginPath(); ctx.arc(x,y,R*1.46*sc,0,TAU); ctx.stroke();
+  ctx.restore();
+
+  /* spin highlight ring */
+  if(phase===PH.SPIN && spin && f.id===spin.ids[spin.curi]){
+    ctx.strokeStyle='rgba(255,255,255,.95)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(x,y,R*1.7*sc,0,TAU); ctx.stroke();
+  }
+
+  /* winner crown rings */
+  if(f.state==='winner'){
+    ctx.save();
+    ctx.lineCap='round';
+    ctx.setLineDash([8,30]);
+    ctx.lineDashOffset = -now/8;
+    ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(x,y,R*1.75*sc,0,TAU); ctx.stroke();
+    ctx.setLineDash([4,44]);
+    ctx.lineDashOffset = now/10;
+    ctx.strokeStyle = rgba(c,.7); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(x,y,R*2.1*sc,0,TAU); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* countdown progress arc */
+  if(phase===PH.COUNT && f.state==='alive'){
+    var prog = clamp((now-countStart)/COUNT_MS,0,1);
+    var ar = R*1.62*s;
+    ctx.strokeStyle = rgba('#ffffff',.12); ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(x,y,ar,0,TAU); ctx.stroke();
+    ctx.strokeStyle = c; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(x,y,ar,-Math.PI/2,-Math.PI/2+prog*TAU); ctx.stroke();
+    var tx = x+Math.cos(-Math.PI/2+prog*TAU)*ar;
+    var ty = y+Math.sin(-Math.PI/2+prog*TAU)*ar;
+    ctx.globalCompositeOperation='lighter';
+    drawGlow('#ffffff',tx,ty,26,.9);
+    ctx.globalCompositeOperation='source-over';
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(tx,ty,3.4,0,TAU); ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+}
+function drawConstellation(now){
+  if(!(phase===PH.COUNT || phase===PH.SPIN)) return;
+  var alive=[];
+  fingers.forEach(function(f){ if(f.state==='alive'||f.state==='winner') alive.push(f); });
+  if(alive.length<2) return;
+  var maxD = Math.min(W,H)*.85;
+  var beat = (phase===PH.COUNT) ? (.7+.3*Math.sin(now/180)) : .45;
+  ctx.globalCompositeOperation='lighter';
+  ctx.lineWidth=2;
+  for(var i=0;i<alive.length;i++){
+    for(var j=i+1;j<alive.length;j++){
+      var a=alive[i], b=alive[j];
+      var d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d>maxD) continue;
+      var al=(1-d/maxD)*.16*beat;
+      var g=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+      g.addColorStop(0, rgba(a.color,al));
+      g.addColorStop(1, rgba(b.color,al));
+      ctx.strokeStyle=g;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation='source-over';
+}
+function render(now){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#06060d';
+  ctx.fillRect(0,0,W,H);
+
+  /* ambient blobs */
+  var bigR = Math.max(W,H);
+  for(var b=0;b<blobs.length;b++){
+    var bl=blobs[b];
+    var bx=(bl.px + Math.cos(now*bl.sp+bl.ph)*bl.rx)*W;
+    var by=(bl.py + Math.sin(now*bl.sp*1.2+bl.ph)*bl.ry)*H;
+    var br=bigR*bl.sz*.62;
+    var g=ctx.createRadialGradient(bx,by,0,bx,by,br);
+    g.addColorStop(0, rgba(bl.c, bl.a));
+    g.addColorStop(1, rgba(bl.c, 0));
+    ctx.fillStyle=g;
+    ctx.fillRect(bx-br,by-br,br*2,br*2);
+  }
+  /* winner afterglow tint */
+  if(phase===PH.WIN || phase===PH.OUT){
+    var wf=fingers.get(winnerId);
+    var wx=wf?wf.x:W/2, wy=wf?wf.y:H/2;
+    var wr=bigR*.8;
+    var wg=ctx.createRadialGradient(wx,wy,0,wx,wy,wr);
+    var wa=.16+.05*Math.sin(now/420);
+    wg.addColorStop(0, rgba(winnerColor, wa));
+    wg.addColorStop(1, rgba(winnerColor, 0));
+    ctx.fillStyle=wg;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  /* stars */
+  ctx.globalCompositeOperation='lighter';
+  for(var st=0;st<stars.length;st++){
+    var sObj=stars[st];
+    var tw=.06+.16*(.5+.5*Math.sin(now/1000*sObj.sp*TAU+sObj.ph));
+    ctx.globalAlpha=tw;
+    ctx.fillStyle='#cfd8ff';
+    ctx.beginPath(); ctx.arc(sObj.x*W,sObj.y*H,sObj.r,0,TAU); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+
+  drawConstellation(now);
+
+  /* ripples */
+  ctx.globalCompositeOperation='lighter';
+  for(var r=0;r<ripples.length;r++){
+    var rp=ripples[r];
+    var t=clamp((now-rp.start)/rp.dur,0,1);
+    var rr=easeOutCubic(t)*rp.maxR;
+    ctx.globalAlpha=(1-t)*rp.alpha;
+    ctx.strokeStyle=rp.color;
+    ctx.lineWidth=lerp(rp.width,1,t);
+    ctx.beginPath(); ctx.arc(rp.x,rp.y,rr,0,TAU); ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+
+  /* fingers */
+  fingers.forEach(function(f){ drawFinger(f, now); });
+
+  /* particles */
+  ctx.globalCompositeOperation='lighter';
+  for(var p=0;p<particles.length;p++){
+    var pt=particles[p];
+    var la=clamp(pt.life/pt.maxLife,0,1);
+    ctx.globalAlpha=la;
+    ctx.fillStyle=pt.color;
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.size*la+0.4,0,TAU); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+
+  /* flash */
+  if(flash>0){
+    ctx.globalCompositeOperation='lighter';
+    ctx.globalAlpha=flash*.22;
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=1;
+    ctx.globalCompositeOperation='source-over';
+  }
+  /* fade-out to idle */
+  if(phase===PH.OUT){
+    var ot=clamp((now-outAt)/560,0,1);
+    ctx.globalAlpha=easeInCubic(ot);
+    ctx.fillStyle='#06060d';
+    ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=1;
+  }
+}
+
+/* ============================== LOOP ============================== */
+var last=performance.now();
+function frame(now){
+  var dt=Math.min(50, now-last)/1000;
+  last=now;
+  update(now,dt);
+  render(now);
+  requestAnimationFrame(frame);
+}
+syncUI();
+requestAnimationFrame(frame);
+
+})();
 </script>
 </body>
 </html>
